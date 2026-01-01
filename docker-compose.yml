@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: phms-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: phms@2024
+      MYSQL_DATABASE: phms
+      MYSQL_USER: phms
+      MYSQL_PASSWORD: phms@2024
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - phms-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存服务
+  redis:
+    image: redis:7.0-alpine
+    container_name: phms-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass phms@2024
+    networks:
+      - phms-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "phms@2024", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 后端 Spring Boot 服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: phms-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: phms
+      MYSQL_USERNAME: phms
+      MYSQL_PASSWORD: phms@2024
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: phms@2024
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - phms-network
+
+  # B端管理前端
+  frontend-admin:
+    build:
+      context: ./frontend-admin
+      dockerfile: Dockerfile
+    container_name: phms-frontend-admin
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - phms-network
+
+  # C端用户前端
+  frontend-user:
+    build:
+      context: ./frontend-user
+      dockerfile: Dockerfile
+    container_name: phms-frontend-user
+    restart: always
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - phms-network
+
+networks:
+  phms-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:

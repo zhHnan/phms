@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="81519e58-0431-4930-bca8-84b5cdd2fc85" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/Application.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/aspect/OperateLogAspect.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/common/annotation/OperateLog.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/common/constant/Constants.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/common/exception/BusinessException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/common/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/common/result/Result.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/common/result/ResultCode.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/config/Knife4jConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/config/MybatisPlusConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/config/StpInterfaceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/config/WebMvcConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/config/tenant/TenantHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/AuthController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/CareLogController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/DashboardController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/HotelController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/LogController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/OrderController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/PermissionController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/PetController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/RoleController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/RoomController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/controller/StaffController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/dto/LoginDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/dto/OrderCreateDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/dto/RolePermissionDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/dto/SendCodeDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/dto/StaffDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/dto/StaffLoginDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/BaseEntity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/CareLog.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Hotel.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/LoginLog.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/OperationLog.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Order.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Permission.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Pet.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Role.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/RolePermission.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Room.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/Staff.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/User.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/entity/VerificationCode.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/CareLogMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/HotelMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/LoginLogMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/OperationLogMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/OrderMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/PermissionMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/PetMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/RoleMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/RolePermissionMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/RoomMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/StaffMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/UserMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/mapper/VerificationCodeMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/AuthService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/CareLogService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/HotelService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/LoginLogService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/OperationLogService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/OrderService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/PermissionService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/PetService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/RoomService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/StaffService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/UserService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/VerificationCodeService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/AuthServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/CareLogServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/HotelServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/LoginLogServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/OperationLogServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/OrderServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/PermissionServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/PetServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/RoomServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/StaffServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/UserServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/service/impl/VerificationCodeServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/vo/DashboardVO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/vo/LoginVO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/vo/StaffInfoVO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/phms/vo/StaffLoginVO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/application.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/Application.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/aspect/OperateLogAspect.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/common/annotation/OperateLog.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/common/constant/Constants.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/common/exception/BusinessException.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/common/exception/GlobalExceptionHandler.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/common/result/Result.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/common/result/ResultCode.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/config/Knife4jConfig.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/config/MybatisPlusConfig.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/config/StpInterfaceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/config/WebMvcConfig.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/config/tenant/TenantHandler.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/AuthController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/CareLogController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/DashboardController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/HotelController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/LogController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/OrderController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/PermissionController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/PetController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/RoleController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/RoomController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/controller/StaffController.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/dto/LoginDTO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/dto/OrderCreateDTO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/dto/RolePermissionDTO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/dto/SendCodeDTO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/dto/StaffDTO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/dto/StaffLoginDTO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/BaseEntity.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/CareLog.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Hotel.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/LoginLog.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/OperationLog.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Order.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Permission.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Pet.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Role.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/RolePermission.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Room.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/Staff.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/User.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/entity/VerificationCode.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/CareLogMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/HotelMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/LoginLogMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/OperationLogMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/OrderMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/PermissionMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/PetMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/RoleMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/RolePermissionMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/RoomMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/StaffMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/UserMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/mapper/VerificationCodeMapper.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/AuthService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/CareLogService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/HotelService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/LoginLogService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/OperationLogService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/OrderService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/PermissionService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/PetService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/RoomService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/StaffService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/UserService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/VerificationCodeService.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/AuthServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/CareLogServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/HotelServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/LoginLogServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/OperationLogServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/OrderServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/PermissionServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/PetServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/RoomServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/StaffServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/UserServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/service/impl/VerificationCodeServiceImpl.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/vo/DashboardVO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/vo/LoginVO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/vo/StaffInfoVO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/classes/com/phms/vo/StaffLoginVO.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/maven-archiver/pom.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/phms-backend-1.0.0.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/phms-backend-1.0.0.jar.original" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../README.md" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="customMavenHome" value="D:\profiles\maven-3.9" />
+        <option name="localRepository" value="D:\profiles\maven-3.9\repository" />
+        <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
+        <option name="userSettingsFile" value="D:\profiles\maven-3.9\conf\settings.xml" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="376V1O5mYXaDawPooBdf0zBpbrS" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="false" />
+    <option name="showLibraryContents" value="true" />
+    <option name="showScratchesAndConsoles" value="false" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.phms-backend [clean,install].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Notification.DisplayName-DoNotAsk-DatabaseConfigFileWatcher.found": "发现新的/更新的数据库配置",
+    "Notification.DoNotAsk-DatabaseConfigFileWatcher.found": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "Spring Boot.Application.executor": "Debug",
+    "Spring Boot.PhmsApplication.executor": "Debug",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "E:/projects/phms/backend",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "项目",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
+  }
+}]]></component>
+  <component name="ReactorSettings">
+    <option name="notificationShown" value="true" />
+  </component>
+  <component name="RunManager">
+    <configuration name="Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="phms-backend" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.phms.Application" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-26cb7f24e5b0-intellij.indexing.shared.core-IU-253.29346.138" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.29346.138" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="81519e58-0431-4930-bca8-84b5cdd2fc85" name="更改" comment="" />
+      <created>1747623735833</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1747623735833</updated>
+      <workItem from="1766223292553" duration="422000" />
+      <workItem from="1766223846429" duration="17946000" />
+      <workItem from="1766892604689" duration="26000" />
+      <workItem from="1767252537310" duration="317000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
