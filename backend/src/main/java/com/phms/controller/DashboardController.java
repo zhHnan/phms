@@ -73,6 +73,11 @@ public class DashboardController {
         vo.setMaintenanceRooms(roomStatusCount.get(Constants.ROOM_STATUS_MAINTENANCE));
         vo.setTotalRooms((long) rooms.size());
 
+        // 收入统计
+        vo.setTodayRevenue(orderService.calculateTodayRevenue(hotelId));
+        vo.setMonthRevenue(orderService.calculateMonthRevenue(hotelId));
+        vo.setTotalRevenue(orderService.calculateTotalRevenue(hotelId));
+
         return Result.success(vo);
     }
 }

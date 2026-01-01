@@ -35,7 +35,8 @@
         <div class="flex justify-between items-start mb-4">
           <div>
             <p class="text-sm text-gray-500">订单号: {{ order.orderNo }}</p>
-            <p class="text-sm text-gray-500">{{ order.createdAt }}</p>
+            <p class="text-sm text-gray-500">{{ formatDateTime(order.createdAt) }}</p>
+            <p v-if="order.hotelName" class="text-sm text-gray-500 mt-1">🏨 {{ order.hotelName }}</p>
           </div>
           <span 
             class="px-3 py-1 rounded-full text-sm"
@@ -50,16 +51,40 @@
             {{ getRoomIcon(order.roomType) }}
           </div>
           <div class="flex-1">
-            <h3 class="font-semibold">{{ order.petName }}</h3>
-            <p class="text-gray-500 text-sm">{{ getRoomTypeName(order.roomType) }} · {{ order.roomNo }}</p>
-            <p class="text-gray-500 text-sm">{{ order.checkInDate }} 至 {{ order.checkOutDate }} ({{ order.days }}天)</p>
+            <div class="font-semibold mb-1">
+              <span v-if="getPetNames(order).length > 0">
+                {{ getPetNames(order).join('、') }}
+              </span>
+              <span v-else class="text-gray-400">未知宠物</span>
+            </div>
+            <p class="text-gray-500 text-sm">
+              <span v-if="order.roomType">{{ getRoomTypeName(order.roomType) }}</span>
+              <span v-if="order.roomType && order.roomNo"> · </span>
+              <span v-if="order.roomNo">{{ order.roomNo }}</span>
+              <span v-if="!order.roomType && !order.roomNo" class="text-gray-400">房间信息不完整</span>
+            </p>
+            <p class="text-gray-500 text-sm">{{ order.checkInDate }} 至 {{ order.checkOutDate }}<span v-if="order.days"> ({{ order.days }}天)</span></p>
           </div>
           <div class="text-right">
-            <p class="text-xl font-bold text-primary-600">¥{{ order.totalPrice }}</p>
+            <p class="text-xl font-bold text-primary-600">¥{{ order.totalAmount || order.totalPrice || 0 }}</p>
           </div>
         </div>
 
-        <div v-if="order.status <= 1" class="mt-4 pt-4 border-t flex justify-end space-x-4">
+        <div v-if="order.status === 0" class="mt-4 pt-4 border-t flex justify-end space-x-4">
+          <button 
+            @click.stop="payOrder(order)" 
+            class="text-primary-600 hover:text-primary-700 font-medium"
+          >
+            立即付款
+          </button>
+          <button 
+            @click.stop="cancelOrder(order)" 
+            class="text-red-500 hover:text-red-600"
+          >
+            取消订单
+          </button>
+        </div>
+        <div v-else-if="order.status === 1" class="mt-4 pt-4 border-t flex justify-end space-x-4">
           <button 
             @click.stop="cancelOrder(order)" 
             class="text-red-500 hover:text-red-600"
@@ -94,25 +119,37 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import request from '@/utils/request'
+import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
+
+interface Pet {
+  id: number
+  name: string
+  type: number
+}
 
 interface Order {
   id: number
   orderNo: string
-  petName: string
-  roomNo: string
-  roomType: string
+  hotelId?: number
+  hotelName?: string  // 酒店名称
+  petIds?: string | number[]  // JSON字符串或数组
+  petName?: string  // 兼容旧数据
+  pets?: Pet[]  // 宠物列表
+  roomNo?: string
+  roomType?: string
   checkInDate: string
   checkOutDate: string
-  days: number
-  totalPrice: number
+  days?: number
+  totalAmount?: number  // 后端返回的字段
+  totalPrice?: number   // 兼容字段
   status: number
   createdAt: string
 }
 
 const tabs = [
   { label: '全部', value: '' },
-  { label: '待确认', value: '0' },
-  { label: '已确认', value: '1' },
+  { label: '待支付', value: '0' },
+  { label: '待入住', value: '1' },
   { label: '已入住', value: '2' },
   { label: '已完成', value: '3' },
   { label: '已取消', value: '4' }
@@ -127,8 +164,8 @@ const total = ref(0)
 
 const getStatusName = (status: number) => {
   const map: Record<number, string> = {
-    0: '待确认',
-    1: '已确认',
+    0: '待支付',
+    1: '待入住',
     2: '已入住',
     3: '已完成',
     4: '已取消'
@@ -164,6 +201,43 @@ const getRoomIcon = (type: string) => {
   return '👑'
 }
 
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+const getPetNames = (order: Order): string[] => {
+  // 如果有 pets 数组，直接使用
+  if (order.pets && order.pets.length > 0) {
+    return order.pets.map(p => p.name)
+  }
+  
+  // 兼容旧的 petName 字段
+  if (order.petName) {
+    return [order.petName]
+  }
+  
+  // 解析 petIds，显示宠物数量
+  if (order.petIds) {
+    try {
+      const ids = typeof order.petIds === 'string' ? JSON.parse(order.petIds) : order.petIds
+      if (ids.length > 0) {
+        return [`${ids.length}只宠物`]
+      }
+    } catch {
+      return []
+    }
+  }
+  
+  return []
+}
+
 const fetchOrders = async () => {
   loading.value = true
   try {
@@ -186,13 +260,31 @@ const fetchOrders = async () => {
 }
 
 const cancelOrder = async (order: Order) => {
-  if (!confirm('确定要取消该订单吗？')) return
+  if (!await showConfirm('确定要取消该订单吗？')) return
   
   try {
     await request.post(`/order/${order.id}/cancel`)
     order.status = 4
+    showSuccess('已取消订单')
   } catch (error: any) {
-    alert(error.message || '取消失败')
+    showError(error.message || '取消失败')
+  }
+}
+
+const payOrder = async (order: Order) => {
+  try {
+    // 模拟支付延迟 2 秒
+    showInfo('正在处理支付...')
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // 调用支付接口
+    await request.post(`/order/${order.id}/pay`)
+    
+    // 更新订单状态
+    order.status = 1
+    showSuccess('支付成功！请在入住当天12:00后办理入住手续')
+  } catch (error: any) {
+    showError(error.message || '支付失败')
   }
 }
 

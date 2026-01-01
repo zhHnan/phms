@@ -1,7 +1,9 @@
 package com.phms.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -14,6 +16,7 @@ import com.phms.entity.Room;
 import com.phms.mapper.OrderMapper;
 import com.phms.service.OrderService;
 import com.phms.service.RoomService;
+import com.phms.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /**
  * 订单 Service 实现类
@@ -32,6 +36,7 @@ import java.time.temporal.ChronoUnit;
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements OrderService {
 
+    private final OrderMapper orderMapper;
     private final RoomService roomService;
 
     @Override
@@ -45,8 +50,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
+    public Page<OrderVO> pageListVO(Page<OrderVO> page, Long hotelId, Long userId, Integer status) {
+        return orderMapper.selectOrderVOPage(page, hotelId, userId, status);
+    }
+
+    @Override
+    public OrderVO getOrderVOById(Long id) {
+        return orderMapper.selectOrderVOById(id);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(OrderCreateDTO dto) {
+        // 获取当前用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+        
         // 检查房间是否可用
         Room room = roomService.getById(dto.getRoomId());
         if (room == null) {
@@ -54,6 +72,29 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         if (room.getStatus() != Constants.ROOM_STATUS_FREE) {
             throw new BusinessException(ResultCode.ROOM_UNAVAILABLE);
+        }
+
+        // 验证宠物数量是否超过房间容量
+        List<Long> petIds = dto.getPetIds();
+        if (petIds == null || petIds.isEmpty()) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "请至少选择一只宠物");
+        }
+        if (petIds.size() > room.getMaxPetNum()) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, 
+                String.format("该房间最多容纳 %d 只宠物，您选择了 %d 只", room.getMaxPetNum(), petIds.size()));
+        }
+
+        // 检查日期是否有冲突（该房间在这个时间段是否已被预订）
+        long conflictCount = lambdaQuery()
+                .eq(Order::getRoomId, dto.getRoomId())
+                .in(Order::getStatus, Constants.ORDER_STATUS_PENDING, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN)
+                .and(wrapper -> wrapper
+                    .lt(Order::getCheckInDate, dto.getCheckOutDate())
+                    .gt(Order::getCheckOutDate, dto.getCheckInDate())
+                )
+                .count();
+        if (conflictCount > 0) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "该房间在所选日期已被预订");
         }
 
         // 计算天数和金额
@@ -66,12 +107,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 创建订单
         Order order = new Order();
         order.setOrderNo(generateOrderNo());
+        order.setUserId(userId);
         order.setHotelId(dto.getHotelId());
-        order.setPetId(dto.getPetId());
+        order.setPetIds(JSONUtil.toJsonStr(petIds)); // 所有宠物ID
         order.setRoomId(dto.getRoomId());
         order.setCheckInDate(dto.getCheckInDate());
         order.setCheckOutDate(dto.getCheckOutDate());
         order.setTotalAmount(totalAmount);
+        order.setRemark(dto.getRemark());
         order.setStatus(Constants.ORDER_STATUS_PENDING);
         save(order);
 
@@ -131,6 +174,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ResultCode.ORDER_STATUS_ERROR, "订单状态不正确，无法办理入住");
         }
 
+        // 校验当前日期是否是入住日期
+        LocalDate today = LocalDate.now();
+        LocalDate checkInDate = order.getCheckInDate();
+        
+        if (today.isBefore(checkInDate)) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, 
+                String.format("入住日期为 %s，当前无法办理入住", checkInDate));
+        }
+
         // 更新订单状态
         order.setStatus(Constants.ORDER_STATUS_CHECKED_IN);
         updateById(order);
@@ -183,6 +235,55 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 .eq(hotelId != null, Order::getHotelId, hotelId)
                 .eq(Order::getStatus, Constants.ORDER_STATUS_CHECKED_IN)
                 .count();
+    }
+
+    @Override
+    public BigDecimal calculateTodayRevenue(Long hotelId) {
+        LocalDate today = LocalDate.now();
+        List<Order> orders = lambdaQuery()
+                .eq(hotelId != null, Order::getHotelId, hotelId)
+                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN, Constants.ORDER_STATUS_COMPLETED)
+                .ge(Order::getPayTime, today.atStartOfDay())
+                .lt(Order::getPayTime, today.plusDays(1).atStartOfDay())
+                .list();
+        
+        return orders.stream()
+                .map(Order::getTotalAmount)
+                .filter(amount -> amount != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Override
+    public BigDecimal calculateMonthRevenue(Long hotelId) {
+        LocalDate today = LocalDate.now();
+        LocalDate firstDayOfMonth = today.withDayOfMonth(1);
+        LocalDate firstDayOfNextMonth = firstDayOfMonth.plusMonths(1);
+        
+        List<Order> orders = lambdaQuery()
+                .eq(hotelId != null, Order::getHotelId, hotelId)
+                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN, Constants.ORDER_STATUS_COMPLETED)
+                .ge(Order::getPayTime, firstDayOfMonth.atStartOfDay())
+                .lt(Order::getPayTime, firstDayOfNextMonth.atStartOfDay())
+                .list();
+        
+        return orders.stream()
+                .map(Order::getTotalAmount)
+                .filter(amount -> amount != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Override
+    public BigDecimal calculateTotalRevenue(Long hotelId) {
+        List<Order> orders = lambdaQuery()
+                .eq(hotelId != null, Order::getHotelId, hotelId)
+                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN, Constants.ORDER_STATUS_COMPLETED)
+                .isNotNull(Order::getPayTime)
+                .list();
+        
+        return orders.stream()
+                .map(Order::getTotalAmount)
+                .filter(amount -> amount != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**

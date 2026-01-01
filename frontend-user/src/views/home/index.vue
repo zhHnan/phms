@@ -48,27 +48,67 @@
       </div>
     </section>
 
-    <!-- 房型展示 -->
+    <!-- 热门酒店 -->
     <section class="py-16 bg-gray-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">热门房型</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div v-for="room in featuredRooms" :key="room.type" class="card group cursor-pointer" @click="$router.push('/rooms')">
-            <div class="h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center text-6xl">
-              {{ room.icon }}
-            </div>
-            <h3 class="text-xl font-semibold mb-2">{{ room.name }}</h3>
-            <p class="text-gray-600 mb-4">{{ room.description }}</p>
-            <div class="flex justify-between items-center">
-              <span class="text-2xl font-bold text-primary-600">¥{{ room.price }}<span class="text-sm text-gray-500">/天</span></span>
-              <span class="text-primary-600 group-hover:translate-x-1 transition-transform">查看详情 →</span>
+        <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">热门酒店</h2>
+        
+        <!-- 加载状态 -->
+        <div v-if="loading" class="text-center py-20">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
+          <p class="mt-4 text-gray-600">加载中...</p>
+        </div>
+
+        <!-- 酒店列表 - 横向滚动 -->
+        <div v-else-if="hotels.length > 0" class="relative">
+          <div class="overflow-x-auto scrollbar-hide">
+            <div class="flex gap-6 pb-4" :class="hotels.length <= 3 ? 'justify-center' : ''">
+              <div 
+                v-for="hotel in hotels" 
+                :key="hotel.id" 
+                class="card group cursor-pointer hover:shadow-lg transition-shadow flex-shrink-0"
+                :style="{ width: hotels.length <= 3 ? 'calc(33.333% - 1rem)' : '350px', minWidth: '300px' }"
+                @click="goToHotelRooms(hotel.id)"
+              >
+                <div class="h-48 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg mb-4 flex items-center justify-center text-6xl">
+                  🏨
+                </div>
+                <h3 class="text-xl font-semibold mb-2">{{ hotel.name }}</h3>
+                <div class="space-y-2 mb-4">
+                  <p class="text-gray-600 text-sm flex items-center">
+                    <span class="mr-2">📍</span>
+                    {{ hotel.address }}
+                  </p>
+                  <p class="text-gray-600 text-sm flex items-center">
+                    <span class="mr-2">📞</span>
+                    {{ hotel.phone }}
+                  </p>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span 
+                    class="px-3 py-1 text-sm rounded-full"
+                    :class="hotel.status === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                  >
+                    {{ hotel.status === 1 ? '营业中' : '休息中' }}
+                  </span>
+                  <span class="text-primary-600 group-hover:translate-x-1 transition-transform">
+                    查看房间 →
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+          
+          <!-- 滚动提示 -->
+          <div v-if="hotels.length > 3" class="text-center mt-4 text-sm text-gray-500">
+            ← 左右滑动查看更多酒店 →
+          </div>
         </div>
-        <div class="text-center mt-8">
-          <router-link to="/rooms" class="btn-secondary">
-            查看全部房型
-          </router-link>
+
+        <!-- 空状态 -->
+        <div v-else class="text-center py-20">
+          <span class="text-6xl">🏨</span>
+          <p class="mt-4 text-gray-600">暂无酒店信息</p>
         </div>
       </div>
     </section>
@@ -108,29 +148,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getHotelList, type Hotel } from '@/api'
 
-const featuredRooms = ref([
-  {
-    type: 'cat_standard',
-    name: '猫咪标间',
-    icon: '🐱',
-    description: '适合单只猫咪居住，配备猫爬架和玩具',
-    price: 98
-  },
-  {
-    type: 'dog_standard',
-    name: '狗狗标间',
-    icon: '🐕',
-    description: '适合中小型犬，室内外活动空间充足',
-    price: 128
-  },
-  {
-    type: 'vip_suite',
-    name: 'VIP套间',
-    icon: '👑',
-    description: '尊贵享受，独立活动区域，专属护理',
-    price: 298
+const router = useRouter()
+const hotels = ref<Hotel[]>([])
+const loading = ref(false)
+
+// 获取酒店列表
+const fetchHotels = async () => {
+  loading.value = true
+  try {
+    const res = await getHotelList()
+    // 只显示营业中的酒店
+    hotels.value = res.data.filter(h => h.status === 1)
+  } catch (error) {
+    console.error('获取酒店列表失败:', error)
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 跳转到酒店房间列表
+const goToHotelRooms = (hotelId: number) => {
+  router.push({
+    path: '/rooms',
+    query: { hotelId: hotelId.toString() }
+  })
+}
+
+onMounted(() => {
+  fetchHotels()
+})
 </script>

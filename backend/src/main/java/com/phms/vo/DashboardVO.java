@@ -35,4 +35,13 @@ public class DashboardVO {
 
     @Schema(description = "总房间数")
     private Long totalRooms;
+
+    @Schema(description = "今日收入")
+    private java.math.BigDecimal todayRevenue;
+
+    @Schema(description = "本月收入")
+    private java.math.BigDecimal monthRevenue;
+
+    @Schema(description = "总收入")
+    private java.math.BigDecimal totalRevenue;
 }

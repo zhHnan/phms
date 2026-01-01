@@ -79,6 +79,7 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { showSuccess, showError, showWarning } from '@/utils/message'
 
 const router = useRouter()
 const route = useRoute()
@@ -94,17 +95,17 @@ let timer: number | null = null
 
 const sendCode = async () => {
   if (!phone.value || phone.value.length !== 11) {
-    alert('请输入正确的手机号')
+    showWarning('请输入正确的手机号')
     return
   }
 
   sendingCode.value = true
   try {
     await userStore.sendCode(phone.value)
-    alert('验证码已发送')
+    showSuccess('验证码已发送')
     startCountdown()
   } catch (error: any) {
-    alert(error.message || '发送验证码失败')
+    showError(error.message || '发送验证码失败')
   } finally {
     sendingCode.value = false
   }
@@ -122,7 +123,7 @@ const startCountdown = () => {
 
 const handleLogin = async () => {
   if (!phone.value || !code.value) {
-    alert('请填写完整信息')
+    showWarning('请填写完整信息')
     return
   }
 
@@ -132,7 +133,7 @@ const handleLogin = async () => {
     const redirect = route.query.redirect as string || '/'
     router.push(redirect)
   } catch (error: any) {
-    alert(error.message || '登录失败')
+    showError(error.message || '登录失败')
   } finally {
     loading.value = false
   }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.phms.entity.Order;
 import com.phms.dto.OrderCreateDTO;
+import com.phms.vo.OrderVO;
 
 /**
  * 订单 Service
@@ -22,6 +23,25 @@ public interface OrderService extends IService<Order> {
      * @return 分页结果
      */
     Page<Order> pageList(Page<Order> page, Long hotelId, Long userId, Integer status);
+
+    /**
+     * 分页查询订单列表（带酒店和房间信息）
+     *
+     * @param page    分页参数
+     * @param hotelId 门店ID
+     * @param userId  用户ID
+     * @param status  状态
+     * @return 分页结果
+     */
+    Page<OrderVO> pageListVO(Page<OrderVO> page, Long hotelId, Long userId, Integer status);
+
+    /**
+     * 根据ID查询订单详情（带酒店和房间信息）
+     *
+     * @param id 订单ID
+     * @return 订单详情
+     */
+    OrderVO getOrderVOById(Long id);
 
     /**
      * 创建订单
@@ -86,4 +106,28 @@ public interface OrderService extends IService<Order> {
      * @return 在住数
      */
     long countCheckedInPets(Long hotelId);
+
+    /**
+     * 统计门店今日收入
+     *
+     * @param hotelId 门店ID
+     * @return 收入金额
+     */
+    java.math.BigDecimal calculateTodayRevenue(Long hotelId);
+
+    /**
+     * 统计门店本月收入
+     *
+     * @param hotelId 门店ID
+     * @return 收入金额
+     */
+    java.math.BigDecimal calculateMonthRevenue(Long hotelId);
+
+    /**
+     * 统计门店总收入
+     *
+     * @param hotelId 门店ID
+     * @return 收入金额
+     */
+    java.math.BigDecimal calculateTotalRevenue(Long hotelId);
 }

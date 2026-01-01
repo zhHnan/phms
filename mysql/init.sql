@@ -157,7 +157,9 @@ CREATE TABLE `biz_pets` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` bigint UNSIGNED NOT NULL COMMENT '主人ID',
   `name` varchar(50) NOT NULL COMMENT '宠物名字',
+  
   `type` tinyint NOT NULL COMMENT '1=猫 2=狗 3=异宠',
+  `age` int DEFAULT NULL COMMENT '宠物年龄（岁）',
   `weight` decimal(5,2) DEFAULT NULL COMMENT '宠物体重（kg）',
   `notes` varchar(500) DEFAULT NULL COMMENT '性格/健康备注',
   `photo_url` varchar(255) DEFAULT NULL COMMENT '宠物照片URL',
@@ -177,7 +179,6 @@ CREATE TABLE `biz_orders` (
   `order_no` varchar(32) NOT NULL COMMENT '订单号（唯一）',
   `hotel_id` bigint UNSIGNED NOT NULL COMMENT '门店ID',
   `user_id` bigint UNSIGNED NOT NULL COMMENT '用户ID',
-  `pet_id` bigint UNSIGNED NOT NULL COMMENT '宠物ID',
   `room_id` bigint UNSIGNED NOT NULL COMMENT '房间ID',
   `check_in_date` date NOT NULL COMMENT '预计入住日期',
   `check_out_date` date NOT NULL COMMENT '预计离店日期',

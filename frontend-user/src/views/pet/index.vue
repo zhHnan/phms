@@ -22,11 +22,11 @@
         <div class="flex items-start justify-between">
           <div class="flex items-center space-x-4">
             <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl">
-              {{ pet.petType === 'cat' ? '🐱' : '🐕' }}
+              {{ pet.type === 1 ? '🐱' : pet.type === 2 ? '🐕' : '🐰' }}
             </div>
             <div>
               <h3 class="text-xl font-semibold">{{ pet.name }}</h3>
-              <p class="text-gray-500">{{ pet.breed || '未知品种' }}</p>
+              <p class="text-gray-500">{{ pet.type === 1 ? '猫咪' : pet.type === 2 ? '狗狗' : '异宠' }}</p>
             </div>
           </div>
           <div class="flex space-x-2">
@@ -34,7 +34,7 @@
             <button @click="deletePet(pet)" class="text-red-500 hover:text-red-600">删除</button>
           </div>
         </div>
-        <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
           <div>
             <p class="text-gray-500">年龄</p>
             <p class="font-medium">{{ pet.age ? `${pet.age}岁` : '未知' }}</p>
@@ -43,13 +43,9 @@
             <p class="text-gray-500">体重</p>
             <p class="font-medium">{{ pet.weight ? `${pet.weight}kg` : '未知' }}</p>
           </div>
-          <div>
-            <p class="text-gray-500">性别</p>
-            <p class="font-medium">{{ pet.gender === 'male' ? '公' : pet.gender === 'female' ? '母' : '未知' }}</p>
-          </div>
         </div>
-        <div v-if="pet.healthNotes" class="mt-4 p-3 bg-yellow-50 rounded-lg">
-          <p class="text-sm text-yellow-800">健康备注: {{ pet.healthNotes }}</p>
+        <div v-if="pet.notes" class="mt-4 p-3 bg-yellow-50 rounded-lg">
+          <p class="text-sm text-yellow-800">备注: {{ pet.notes }}</p>
         </div>
       </div>
     </div>
@@ -65,15 +61,12 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">宠物类型 *</label>
-            <select v-model="form.petType" required class="input-field">
+            <select v-model.number="form.type" required class="input-field">
               <option value="">请选择</option>
-              <option value="cat">猫咪</option>
-              <option value="dog">狗狗</option>
+              <option :value="1">猫咪 🐱</option>
+              <option :value="2">狗狗 🐕</option>
+              <option :value="3">异宠 🐰</option>
             </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">品种</label>
-            <input v-model="form.breed" class="input-field" placeholder="请输入品种" />
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -86,16 +79,8 @@
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">性别</label>
-            <select v-model="form.gender" class="input-field">
-              <option value="">未知</option>
-              <option value="male">公</option>
-              <option value="female">母</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">健康备注</label>
-            <textarea v-model="form.healthNotes" class="input-field" rows="3" placeholder="请填写宠物的健康状况、过敏信息等"></textarea>
+            <label class="block text-sm font-medium text-gray-700 mb-1">健康/性格备注</label>
+            <textarea v-model="form.notes" class="input-field" rows="3" placeholder="如：疫苗情况、过敏源、性格特点等"></textarea>
           </div>
           <div class="flex justify-end space-x-4 pt-4">
             <button type="button" @click="closeModal" class="btn-secondary">取消</button>
@@ -112,16 +97,15 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '@/utils/request'
+import { showSuccess, showError, showWarning, showConfirm } from '@/utils/message'
 
 interface Pet {
   id: number
   name: string
-  petType: string
-  breed: string
+  type: number
   age: number | null
   weight: number | null
-  gender: string
-  healthNotes: string
+  notes: string
 }
 
 const pets = ref<Pet[]>([])
@@ -132,12 +116,10 @@ const editingPet = ref<Pet | null>(null)
 
 const form = reactive({
   name: '',
-  petType: '',
-  breed: '',
+  type: '' as number | '',
   age: null as number | null,
   weight: null as number | null,
-  gender: '',
-  healthNotes: ''
+  notes: ''
 })
 
 const fetchPets = async () => {
@@ -155,12 +137,10 @@ const fetchPets = async () => {
 const resetForm = () => {
   Object.assign(form, {
     name: '',
-    petType: '',
-    breed: '',
+    type: '',
     age: null,
     weight: null,
-    gender: '',
-    healthNotes: ''
+    notes: ''
   })
 }
 
@@ -174,43 +154,52 @@ const editPet = (pet: Pet) => {
   editingPet.value = pet
   Object.assign(form, {
     name: pet.name,
-    petType: pet.petType,
-    breed: pet.breed,
+    type: pet.type,
     age: pet.age,
     weight: pet.weight,
-    gender: pet.gender,
-    healthNotes: pet.healthNotes
+    notes: pet.notes
   })
   showAddModal.value = true
 }
 
 const deletePet = async (pet: Pet) => {
-  if (!confirm(`确定要删除 ${pet.name} 吗？`)) return
+  const confirmed = await showConfirm(`确定要删除 ${pet.name} 吗？`, '删除宠物')
+  if (!confirmed) return
   
   try {
     await request.delete(`/pet/${pet.id}`)
     pets.value = pets.value.filter(p => p.id !== pet.id)
+    showSuccess('删除成功')
   } catch (error: any) {
-    alert(error.message || '删除失败')
+    showError(error.message || '删除失败')
   }
 }
 
 const handleSubmit = async () => {
+  if (!form.name || !form.type) {
+    showWarning('请填写宠物名称和类型')
+    return
+  }
+
   submitting.value = true
   try {
+    const petData = {
+      ...form,
+      type: Number(form.type)
+    }
+    
     if (editingPet.value) {
-      await request.put('/pet', { ...form, id: editingPet.value.id })
-      const index = pets.value.findIndex(p => p.id === editingPet.value!.id)
-      if (index > -1) {
-        pets.value[index] = { ...pets.value[index], ...form }
-      }
+      await request.put('/pet', { ...petData, id: editingPet.value.id })
+      await fetchPets()  // 重新获取列表
+      showSuccess('修改成功')
     } else {
-      const res = await request.post('/pet', form)
-      pets.value.push(res.data)
+      await request.post('/pet', petData)
+      await fetchPets()  // 重新获取列表
+      showSuccess('添加成功')
     }
     closeModal()
   } catch (error: any) {
-    alert(error.message || '保存失败')
+    showError(error.message || '保存失败')
   } finally {
     submitting.value = false
   }

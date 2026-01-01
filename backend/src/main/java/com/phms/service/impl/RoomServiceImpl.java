@@ -55,12 +55,8 @@ public class RoomServiceImpl extends ServiceImpl<RoomMapper, Room> implements Ro
 
     @Override
     public Page<Room> pageAvailableRooms(Page<Room> page, Long hotelId, String roomType, LocalDate checkInDate, LocalDate checkOutDate) {
-        LambdaQueryWrapper<Room> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(hotelId != null, Room::getHotelId, hotelId)
-                .like(StrUtil.isNotBlank(roomType), Room::getTypeName, roomType)
-                .eq(Room::getStatus, Constants.ROOM_STATUS_FREE)
-                .orderByAsc(Room::getPricePerNight);
-        return page(page, wrapper);
+        // 使用 Mapper 方法查询，包含酒店名称，并排除已预订的房间
+        return baseMapper.selectAvailableRoomsWithHotel(page, hotelId, roomType, checkInDate, checkOutDate);
     }
 
     @Override

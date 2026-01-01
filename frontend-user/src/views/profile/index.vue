@@ -67,6 +67,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import request from '@/utils/request'
+import { showSuccess, showError, showWarning, showConfirm } from '@/utils/message'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -77,7 +78,7 @@ const nickname = ref('')
 
 const handleUpdateNickname = async () => {
   if (!nickname.value.trim()) {
-    alert('请输入昵称')
+    showWarning('请输入昵称')
     return
   }
   
@@ -87,17 +88,17 @@ const handleUpdateNickname = async () => {
     if (userStore.userInfo) {
       userStore.userInfo.nickname = nickname.value
     }
-    alert('修改成功')
+    showSuccess('修改成功')
     nickname.value = ''
   } catch (error: any) {
-    alert(error.message || '修改失败')
+    showError(error.message || '修改失败')
   } finally {
     updating.value = false
   }
 }
 
-const handleLogout = () => {
-  if (confirm('确定要退出登录吗？')) {
+const handleLogout = async () => {
+  if (await showConfirm('确定要退出登录吗？')) {
     userStore.logout()
     router.push('/')
   }

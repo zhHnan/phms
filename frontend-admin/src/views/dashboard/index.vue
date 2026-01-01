@@ -58,6 +58,43 @@
       </el-col>
     </el-row>
 
+    <!-- 收入统计卡片 -->
+    <el-row :gutter="20" class="stat-cards">
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card revenue-card">
+          <div class="stat-icon" style="background-color: #ff9800;">
+            <el-icon :size="28"><Money /></el-icon>
+          </div>
+          <div class="stat-info">
+            <p class="stat-value">¥{{ formatMoney(dashboardData.todayRevenue) }}</p>
+            <p class="stat-label">今日收入</p>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card revenue-card">
+          <div class="stat-icon" style="background-color: #9c27b0;">
+            <el-icon :size="28"><TrendCharts /></el-icon>
+          </div>
+          <div class="stat-info">
+            <p class="stat-value">¥{{ formatMoney(dashboardData.monthRevenue) }}</p>
+            <p class="stat-label">本月收入</p>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card revenue-card">
+          <div class="stat-icon" style="background-color: #00bcd4;">
+            <el-icon :size="28"><Wallet /></el-icon>
+          </div>
+          <div class="stat-info">
+            <p class="stat-value">¥{{ formatMoney(dashboardData.totalRevenue) }}</p>
+            <p class="stat-label">总收入</p>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 图表区域 -->
     <el-row :gutter="20" class="chart-row">
       <el-col :span="12">
@@ -125,8 +162,16 @@ const dashboardData = reactive({
   occupiedRooms: 0,
   cleaningRooms: 0,
   maintenanceRooms: 0,
-  totalRooms: 0
+  totalRooms: 0,
+  todayRevenue: 0,
+  monthRevenue: 0,
+  totalRevenue: 0
 })
+
+const formatMoney = (value: number) => {
+  if (!value && value !== 0) return '0.00'
+  return Number(value).toFixed(2)
+}
 
 const fetchData = async () => {
   try {
@@ -224,6 +269,8 @@ onMounted(() => {
     }
 
     .stat-info {
+      flex: 1;
+      
       .stat-value {
         font-size: 28px;
         font-weight: bold;
@@ -235,6 +282,12 @@ onMounted(() => {
         font-size: 14px;
         color: #999;
         margin-top: 8px;
+      }
+    }
+    
+    &.revenue-card {
+      .stat-value {
+        font-size: 24px;
       }
     }
   }

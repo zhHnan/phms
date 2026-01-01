@@ -43,9 +43,18 @@
       <div class="card">
         <h3 class="text-lg font-semibold mb-4">入住信息</h3>
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <p class="text-gray-500 text-sm">宠物</p>
-            <p class="font-medium">{{ order.petName }}</p>
+          <div class="col-span-2">
+            <p class="text-gray-500 text-sm mb-2">入住宠物</p>
+            <div v-if="getPetInfo(order).length > 0" class="flex flex-wrap gap-2">
+              <span 
+                v-for="pet in getPetInfo(order)" 
+                :key="pet.id || pet.name"
+                class="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium"
+              >
+                {{ getPetIcon(pet.type) }} {{ pet.name }}
+              </span>
+            </div>
+            <p v-else class="font-medium text-gray-400">未知宠物</p>
           </div>
           <div>
             <p class="text-gray-500 text-sm">入住日期</p>
@@ -79,7 +88,7 @@
           </div>
           <div class="flex justify-between pt-2 border-t font-bold text-lg">
             <span>订单总价</span>
-            <span class="text-primary-600">¥{{ order.totalPrice }}</span>
+            <span class="text-primary-600">¥{{ order.totalAmount || order.totalPrice }}</span>
           </div>
         </div>
       </div>
@@ -105,7 +114,24 @@
       </div>
 
       <!-- 操作按钮 -->
-      <div v-if="order.status <= 1" class="flex justify-center">
+      <div v-if="order.status === 0" class="flex justify-center space-x-4">
+        <button 
+          @click="payOrder"
+          :disabled="paying"
+          class="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
+        >
+          <span v-if="paying" class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></span>
+          {{ paying ? '付款中...' : '立即付款' }}
+        </button>
+        <button 
+          @click="cancelOrder"
+          :disabled="paying"
+          class="px-8 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+        >
+          取消订单
+        </button>
+      </div>
+      <div v-else-if="order.status === 1" class="flex justify-center">
         <button 
           @click="cancelOrder"
           class="px-8 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -121,18 +147,28 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '@/utils/request'
+import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
+
+interface Pet {
+  id: number
+  name: string
+  type: number
+}
 
 interface Order {
   id: number
   orderNo: string
-  petName: string
+  petIds?: string | number[]  // JSON字符串或数组
+  petName?: string  // 兼容旧数据
+  pets?: Pet[]  // 宠物列表
   roomNo: string
   roomType: string
   roomPrice: number
   checkInDate: string
   checkOutDate: string
   days: number
-  totalPrice: number
+  totalAmount?: number  // 后端返回的字段
+  totalPrice?: number   // 兼容字段
   status: number
   remark: string
   createdAt: string
@@ -152,11 +188,12 @@ const router = useRouter()
 const order = ref<Order | null>(null)
 const careLogs = ref<CareLog[]>([])
 const loading = ref(true)
+const paying = ref(false)
 
 const getStatusName = (status: number) => {
   const map: Record<number, string> = {
-    0: '待确认',
-    1: '已确认',
+    0: '待支付',
+    1: '待入住',
     2: '已入住',
     3: '已完成',
     4: '已取消'
@@ -225,6 +262,43 @@ const getLogTypeClass = (type: string) => {
   return map[type] || 'bg-gray-100 text-gray-800'
 }
 
+const getPetIcon = (type: number) => {
+  const map: Record<number, string> = {
+    1: '🐱',
+    2: '🐕',
+    3: '🐰'
+  }
+  return map[type] || '🐾'
+}
+
+const getPetInfo = (order: Order): Pet[] => {
+  // 如果有 pets 数组，直接返回
+  if (order.pets && order.pets.length > 0) {
+    return order.pets
+  }
+  
+  // 兼容旧的 petName 字段
+  if (order.petName) {
+    return [{ id: 0, name: order.petName, type: 0 }]
+  }
+  
+  // 解析 petIds，显示 ID 列表
+  if (order.petIds) {
+    try {
+      const ids = typeof order.petIds === 'string' ? JSON.parse(order.petIds) : order.petIds
+      return ids.map((id: number) => ({ 
+        id, 
+        name: `ID: ${id}`, 
+        type: 0 
+      }))
+    } catch {
+      return []
+    }
+  }
+  
+  return []
+}
+
 const fetchOrder = async () => {
   loading.value = true
   try {
@@ -244,7 +318,7 @@ const fetchOrder = async () => {
 }
 
 const cancelOrder = async () => {
-  if (!confirm('确定要取消该订单吗？')) return
+  if (!await showConfirm('确定要取消该订单吗？')) return
   
   try {
     await request.post(`/order/${route.params.id}/cancel`)
@@ -252,7 +326,29 @@ const cancelOrder = async () => {
       order.value.status = 4
     }
   } catch (error: any) {
-    alert(error.message || '取消失败')
+    showError(error.message || '取消失败')
+  }
+}
+
+const payOrder = async () => {
+  if (!order.value) return
+  
+  paying.value = true
+  try {
+    // 模拟支付延迟 2 秒
+    showInfo('正在处理支付...')
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // 调用支付接口
+    await request.post(`/order/${route.params.id}/pay`)
+    
+    // 更新订单状态
+    order.value.status = 1
+    showSuccess('支付成功！请在入住当天12:00后办理入住手续')
+  } catch (error: any) {
+    showError(error.message || '支付失败')
+  } finally {
+    paying.value = false
   }
 }
 

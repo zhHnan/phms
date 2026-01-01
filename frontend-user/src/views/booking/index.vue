@@ -12,12 +12,12 @@
         <h2 class="text-lg font-semibold mb-4">房间信息</h2>
         <div class="flex items-center space-x-4">
           <div class="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-4xl">
-            {{ getRoomIcon(room?.roomType || '') }}
+            {{ getRoomIcon(room?.typeName || '') }}
           </div>
           <div>
-            <h3 class="text-xl font-semibold">{{ getRoomTypeName(room?.roomType || '') }}</h3>
+            <h3 class="text-xl font-semibold">{{ room?.typeName }}</h3>
             <p class="text-gray-500">房间号: {{ room?.roomNo }}</p>
-            <p class="text-primary-600 font-bold">¥{{ room?.price }}/天</p>
+            <p class="text-primary-600 font-bold">¥{{ room?.pricePerNight }}/天</p>
           </div>
         </div>
       </div>
@@ -57,29 +57,48 @@
 
       <!-- 宠物信息 -->
       <div class="card">
-        <h2 class="text-lg font-semibold mb-4">宠物信息</h2>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold">
+            宠物信息 
+            <span class="text-sm text-gray-500 font-normal ml-2">
+              (已选 {{ selectedPets.length }}/{{ room?.maxPetNum || 0 }})
+            </span>
+          </h2>
+        </div>
         
         <div v-if="pets.length > 0" class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">选择已有宠物</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            选择宠物（最多 {{ room?.maxPetNum || 1 }} 只）
+          </label>
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div 
               v-for="pet in pets" 
               :key="pet.id"
-              @click="form.petId = pet.id"
-              class="p-4 border rounded-lg cursor-pointer transition-all"
-              :class="form.petId === pet.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'"
+              @click="togglePet(pet.id)"
+              class="p-4 border rounded-lg cursor-pointer transition-all relative"
+              :class="selectedPets.includes(pet.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'"
             >
-              <div class="text-2xl mb-2">{{ pet.petType === 'cat' ? '🐱' : '🐕' }}</div>
+              <!-- 选中标记 -->
+              <div v-if="selectedPets.includes(pet.id)" class="absolute top-2 right-2 w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center text-white text-xs">
+                ✓
+              </div>
+              <div class="text-2xl mb-2">{{ getPetTypeIcon(pet.type) }}</div>
               <p class="font-medium">{{ pet.name }}</p>
-              <p class="text-sm text-gray-500">{{ pet.breed }}</p>
+              <p class="text-sm text-gray-500">{{ getPetTypeName(pet.type) }}</p>
+              <p v-if="pet.weight" class="text-xs text-gray-400">{{ pet.weight }}kg</p>
             </div>
+          </div>
+          
+          <!-- 容量警告 -->
+          <div v-if="selectedPets.length > (room?.maxPetNum || 1)" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            ⚠️ 已超出房间最大容量（{{ room?.maxPetNum }} 只），请减少宠物数量
           </div>
         </div>
 
         <div v-else class="text-center py-8 bg-gray-50 rounded-lg">
-          <p class="text-gray-600 mb-4">您还没有添加宠物信息</p>
+          <p class="text-gray-600 mb-4">您还没有添加宠物信息，无法预订</p>
           <button type="button" @click="showAddPet = true" class="btn-primary">
-            添加宠物
+            立即添加宠物
           </button>
         </div>
 
@@ -130,25 +149,24 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">宠物类型 *</label>
-            <select v-model="petForm.petType" required class="input-field">
+            <select v-model.number="petForm.type" required class="input-field">
               <option value="">请选择</option>
-              <option value="cat">猫咪</option>
-              <option value="dog">狗狗</option>
+              <option :value="1">猫咪 🐱</option>
+              <option :value="2">狗狗 🐕</option>
+              <option :value="3">异宠 🐰</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">品种</label>
-            <input v-model="petForm.breed" class="input-field" placeholder="请输入品种" />
+            <label class="block text-sm font-medium text-gray-700 mb-1">年龄(岁)</label>
+            <input type="number" v-model.number="petForm.age" min="0" max="30" class="input-field" placeholder="选填" />
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">年龄</label>
-              <input type="number" v-model.number="petForm.age" min="0" class="input-field" placeholder="岁" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">体重(kg)</label>
-              <input type="number" v-model.number="petForm.weight" min="0" step="0.1" class="input-field" />
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">体重(kg)</label>
+            <input type="number" v-model.number="petForm.weight" min="0" step="0.1" class="input-field" placeholder="选填" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">健康/性格备注</label>
+            <textarea v-model="petForm.notes" class="input-field" rows="3" placeholder="如：疫苗情况、过敏源、性格特点等"></textarea>
           </div>
           <div class="flex justify-end space-x-4 pt-4">
             <button type="button" @click="showAddPet = false" class="btn-secondary">取消</button>
@@ -166,19 +184,23 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '@/utils/request'
+import { showSuccess, showError, showWarning } from '@/utils/message'
 
 interface Room {
   id: number
   roomNo: string
-  roomType: string
-  price: number
+  typeName: string
+  pricePerNight: number
+  maxPetNum: number
+  hotelId: number
 }
 
 interface Pet {
   id: number
   name: string
-  petType: string
-  breed: string
+  type: number  // 1=猫 2=狗 3=异宠
+  weight: number
+  notes: string
 }
 
 const route = useRoute()
@@ -191,23 +213,74 @@ const showAddPet = ref(false)
 
 const room = ref<Room | null>(null)
 const pets = ref<Pet[]>([])
+const selectedPets = ref<number[]>([]) // 选中的宠物ID列表
 
 const today = new Date().toISOString().split('T')[0]
 
+// 获取默认日期（明天和后天）
+const getDefaultDates = () => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const dayAfter = new Date()
+  dayAfter.setDate(dayAfter.getDate() + 4) // 默认住3天
+  
+  return {
+    checkIn: tomorrow.toISOString().split('T')[0],
+    checkOut: dayAfter.toISOString().split('T')[0]
+  }
+}
+
+const defaultDates = getDefaultDates()
+
 const form = reactive({
-  petId: null as number | null,
-  checkInDate: '',
-  checkOutDate: '',
+  checkInDate: defaultDates.checkIn,
+  checkOutDate: defaultDates.checkOut,
   remark: ''
 })
 
 const petForm = reactive({
   name: '',
-  petType: '',
-  breed: '',
+  type: '' as number | '',
   age: null as number | null,
-  weight: null as number | null
+  weight: null as number | null,
+  notes: ''
 })
+
+// 切换宠物选择
+const togglePet = (petId: number) => {
+  const index = selectedPets.value.indexOf(petId)
+  if (index > -1) {
+    // 已选中，取消选择
+    selectedPets.value.splice(index, 1)
+  } else {
+    // 未选中，检查是否超出容量
+    if (selectedPets.value.length >= (room.value?.maxPetNum || 1)) {
+      showWarning(`该房间最多容纳 ${room.value?.maxPetNum} 只宠物`)
+      return
+    }
+    selectedPets.value.push(petId)
+  }
+}
+
+// 获取宠物类型图标
+const getPetTypeIcon = (type: number) => {
+  const icons: Record<number, string> = {
+    1: '🐱', // 猫
+    2: '🐕', // 狗
+    3: '🐰'  // 异宠
+  }
+  return icons[type] || '🐾'
+}
+
+// 获取宠物类型名称
+const getPetTypeName = (type: number) => {
+  const names: Record<number, string> = {
+    1: '猫咪',
+    2: '狗狗',
+    3: '异宠'
+  }
+  return names[type] || '未知'
+}
 
 const days = computed(() => {
   if (!form.checkInDate || !form.checkOutDate) return 0
@@ -218,28 +291,23 @@ const days = computed(() => {
 })
 
 const totalPrice = computed(() => {
-  return (room.value?.price || 0) * days.value
+  return (room.value?.pricePerNight || 0) * days.value
 })
 
 const canSubmit = computed(() => {
-  return form.petId && form.checkInDate && form.checkOutDate && days.value > 0
+  return selectedPets.value.length > 0 && 
+         selectedPets.value.length <= (room.value?.maxPetNum || 1) &&
+         form.checkInDate && 
+         form.checkOutDate && 
+         days.value > 0
 })
 
-const getRoomTypeName = (type: string) => {
-  const map: Record<string, string> = {
-    cat_standard: '猫咪标间',
-    cat_deluxe: '猫咪豪华间',
-    dog_standard: '狗狗标间',
-    dog_deluxe: '狗狗豪华间',
-    vip_suite: 'VIP套间'
-  }
-  return map[type] || type
-}
-
-const getRoomIcon = (type: string) => {
-  if (type.startsWith('cat')) return '🐱'
-  if (type.startsWith('dog')) return '🐕'
-  return '👑'
+// 根据房型名称获取图标
+const getRoomIcon = (typeName: string) => {
+  const name = typeName.toLowerCase()
+  if (name.includes('猫') || name.includes('cat')) return '🐱'
+  if (name.includes('狗') || name.includes('dog') || name.includes('犬')) return '🐕'
+  return '🏠'
 }
 
 const fetchData = async () => {
@@ -249,8 +317,8 @@ const fetchData = async () => {
       request.get(`/room/${route.params.roomId}`),
       request.get('/pet/my-pets')
     ])
-    room.value = roomRes.data
-    pets.value = petsRes.data
+    room.value = roomRes.data || roomRes
+    pets.value = petsRes.data || petsRes
   } catch (error) {
     console.error('获取数据失败:', error)
   } finally {
@@ -259,37 +327,81 @@ const fetchData = async () => {
 }
 
 const handleAddPet = async () => {
+  if (!petForm.name || !petForm.type) {
+    showWarning('请填写宠物名称和类型')
+    return
+  }
+  
+  // 确保 type 是有效的数字
+  const typeNum = Number(petForm.type)
+  if (!typeNum || typeNum < 1 || typeNum > 3) {
+    showWarning('请选择有效的宠物类型')
+    return
+  }
+  
   addingPet.value = true
   try {
-    const res = await request.post('/pet', petForm)
-    pets.value.push(res.data)
-    form.petId = res.data.id
+    // 确保 type 是数字类型
+    const petData = {
+      name: petForm.name,
+      type: typeNum,
+      age: petForm.age || null,
+      weight: petForm.weight || null,
+      notes: petForm.notes || ''
+    }
+    console.log('提交宠物数据:', petData)
+    await request.post('/pet', petData)
+    // 重新获取宠物列表
+    const petsRes = await request.get('/pet/my-pets')
+    pets.value = petsRes.data || petsRes
     showAddPet.value = false
     // 重置表单
-    Object.assign(petForm, { name: '', petType: '', breed: '', age: null, weight: null })
+    Object.assign(petForm, { name: '', type: '', age: null, weight: null, notes: '' })
+    showSuccess('添加宠物成功！')
   } catch (error: any) {
-    alert(error.message || '添加宠物失败')
+    showError(error.response?.data?.message || error.message || '添加宠物失败')
   } finally {
     addingPet.value = false
   }
 }
 
 const handleSubmit = async () => {
-  if (!canSubmit.value) return
+  if (!canSubmit.value) {
+    if (selectedPets.value.length === 0) {
+      showWarning('请至少选择一只宠物')
+    } else if (selectedPets.value.length > (room.value?.maxPetNum || 1)) {
+      showWarning(`该房间最多容纳 ${room.value?.maxPetNum} 只宠物，请减少选择`)
+    } else if (!form.checkInDate || !form.checkOutDate) {
+      showWarning('请选择入住和退房日期')
+    }
+    return
+  }
+  
+  // 校验退房日期必须晚于入住日期
+  if (form.checkInDate && form.checkOutDate) {
+    const checkIn = new Date(form.checkInDate)
+    const checkOut = new Date(form.checkOutDate)
+    if (checkOut <= checkIn) {
+      showWarning('退房日期必须晚于入住日期')
+      return
+    }
+  }
   
   submitting.value = true
   try {
-    await request.post('/order', {
+    const res = await request.post('/order', {
+      hotelId: room.value?.hotelId,
       roomId: room.value?.id,
-      petId: form.petId,
+      petIds: selectedPets.value,
       checkInDate: form.checkInDate,
       checkOutDate: form.checkOutDate,
       remark: form.remark
     })
-    alert('预订成功！')
+    const orderData = res.data || res
+    showSuccess('预订成功！订单号：' + orderData.orderNo)
     router.push('/orders')
   } catch (error: any) {
-    alert(error.message || '预订失败')
+    showError(error.response?.data?.message || error.message || '预订失败')
   } finally {
     submitting.value = false
   }

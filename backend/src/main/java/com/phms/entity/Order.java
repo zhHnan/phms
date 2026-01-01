@@ -29,8 +29,8 @@ public class Order extends BaseEntity {
     @Schema(description = "用户ID")
     private Long userId;
 
-    @Schema(description = "宠物ID")
-    private Long petId;
+    @Schema(description = "宠物ID列表（JSON格式）")
+    private String petIds;
 
     @Schema(description = "房间ID")
     private Long roomId;
@@ -46,6 +46,9 @@ public class Order extends BaseEntity {
 
     @Schema(description = "支付时间")
     private LocalDateTime payTime;
+
+    @Schema(description = "备注")
+    private String remark;
 
     @Schema(description = "状态：0=待支付 1=待入住 2=入住中 3=已完成 4=已取消")
     private Integer status;

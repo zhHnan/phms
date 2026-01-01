@@ -8,6 +8,7 @@ import com.phms.common.result.Result;
 import com.phms.dto.OrderCreateDTO;
 import com.phms.entity.Order;
 import com.phms.service.OrderService;
+import com.phms.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,31 +32,31 @@ public class OrderController {
     @Operation(summary = "分页查询订单列表（B端）")
     @GetMapping("/page")
     @SaCheckPermission("order:list")
-    public Result<Page<Order>> page(
+    public Result<Page<OrderVO>> page(
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "门店ID") @RequestParam(required = false) Long hotelId,
             @Parameter(description = "用户ID") @RequestParam(required = false) Long userId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
-        Page<Order> page = new Page<>(pageNum, pageSize);
-        return Result.success(orderService.pageList(page, hotelId, userId, status));
+        Page<OrderVO> page = new Page<>(pageNum, pageSize);
+        return Result.success(orderService.pageListVO(page, hotelId, userId, status));
     }
 
     @Operation(summary = "查询当前用户的订单列表（C端）")
     @GetMapping("/my-orders")
-    public Result<Page<Order>> myOrders(
+    public Result<Page<OrderVO>> myOrders(
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
         Long userId = StpUtil.getLoginIdAsLong();
-        Page<Order> page = new Page<>(pageNum, pageSize);
-        return Result.success(orderService.pageList(page, null, userId, status));
+        Page<OrderVO> page = new Page<>(pageNum, pageSize);
+        return Result.success(orderService.pageListVO(page, null, userId, status));
     }
 
     @Operation(summary = "根据ID查询订单详情")
     @GetMapping("/{id}")
-    public Result<Order> getById(@PathVariable Long id) {
-        return Result.success(orderService.getById(id));
+    public Result<OrderVO> getById(@PathVariable Long id) {
+        return Result.success(orderService.getOrderVOById(id));
     }
 
     @Operation(summary = "根据订单号查询订单详情")

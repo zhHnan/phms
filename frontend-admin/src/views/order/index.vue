@@ -11,8 +11,8 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部状态" clearable>
-            <el-option label="待确认" :value="0" />
-            <el-option label="已确认" :value="1" />
+            <el-option label="待支付" :value="0" />
+            <el-option label="待入住" :value="1" />
             <el-option label="已入住" :value="2" />
             <el-option label="已完成" :value="3" />
             <el-option label="已取消" :value="4" />
@@ -34,14 +34,19 @@
       <el-table :data="tableData" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="orderNo" label="订单号" width="180" />
-        <el-table-column prop="petName" label="宠物" width="120" />
+        <el-table-column prop="userName" label="下单人" width="120" />
+        <el-table-column prop="petNames" label="宠物" width="150">
+          <template #default="{ row }">
+            {{ row.petNames || '未知' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="roomNo" label="房间号" width="100" />
         <el-table-column prop="checkInDate" label="入住日期" width="120" />
         <el-table-column prop="checkOutDate" label="退房日期" width="120" />
         <el-table-column prop="days" label="天数" width="80" />
-        <el-table-column prop="totalPrice" label="总价(元)" width="100">
+        <el-table-column prop="totalAmount" label="总价(元)" width="100">
           <template #default="{ row }">
-            ¥{{ row.totalPrice }}
+            ¥{{ row.totalAmount || row.totalPrice || 0 }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -51,34 +56,38 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleDetail(row)">详情</el-button>
-            <el-button 
-              v-if="row.status === 0" 
-              type="success" 
-              link 
-              @click="handleConfirm(row)"
-            >确认</el-button>
             <el-button 
               v-if="row.status === 1" 
               type="warning" 
               link 
               @click="handleCheckIn(row)"
-            >入住</el-button>
+            >
+              办理入住
+            </el-button>
             <el-button 
               v-if="row.status === 2" 
               type="info" 
               link 
               @click="handleCheckOut(row)"
-            >退房</el-button>
+            >
+              办理退房
+            </el-button>
             <el-button 
               v-if="row.status <= 1" 
               type="danger" 
               link 
               @click="handleCancel(row)"
-            >取消</el-button>
+            >
+              取消
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -104,17 +113,17 @@
             {{ getStatusName(detailData.status) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="宠物名称">{{ detailData.petName }}</el-descriptions-item>
-        <el-descriptions-item label="宠物类型">{{ detailData.petType }}</el-descriptions-item>
+        <el-descriptions-item label="下单人" :span="2">{{ detailData.userName || '未知' }}</el-descriptions-item>
+        <el-descriptions-item label="手机号" :span="2">{{ detailData.userPhone || '未知' }}</el-descriptions-item>
+        <el-descriptions-item label="宠物" :span="2">{{ detailData.petNames || '未知' }}</el-descriptions-item>
         <el-descriptions-item label="房间号">{{ detailData.roomNo }}</el-descriptions-item>
-        <el-descriptions-item label="房间类型">{{ detailData.roomType }}</el-descriptions-item>
+        <el-descriptions-item label="房型">{{ detailData.roomType }}</el-descriptions-item>
         <el-descriptions-item label="入住日期">{{ detailData.checkInDate }}</el-descriptions-item>
         <el-descriptions-item label="退房日期">{{ detailData.checkOutDate }}</el-descriptions-item>
         <el-descriptions-item label="入住天数">{{ detailData.days }}天</el-descriptions-item>
-        <el-descriptions-item label="订单总价">¥{{ detailData.totalPrice }}</el-descriptions-item>
-        <el-descriptions-item label="客户姓名" :span="2">{{ detailData.userName }}</el-descriptions-item>
+        <el-descriptions-item label="订单总价">¥{{ detailData.totalAmount || detailData.totalPrice || 0 }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '无' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ detailData.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailData.createdAt) }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -128,18 +137,19 @@ import request from '@/utils/request'
 interface Order {
   id: number
   orderNo: string
-  petId: number
-  petName: string
-  petType: string
+  petIds?: string
+  petNames?: string
   roomId: number
   roomNo: string
   roomType: string
   userId: number
-  userName: string
+  userName?: string
+  userPhone?: string
   checkInDate: string
   checkOutDate: string
   days: number
-  totalPrice: number
+  totalAmount?: number
+  totalPrice?: number
   status: number
   remark: string
   createdAt: string
@@ -164,8 +174,8 @@ const pagination = reactive({
 
 const getStatusName = (status: number) => {
   const map: Record<number, string> = {
-    0: '待确认',
-    1: '已确认',
+    0: '待支付',
+    1: '待入住',
     2: '已入住',
     3: '已完成',
     4: '已取消'
@@ -182,6 +192,17 @@ const getStatusTagType = (status: number) => {
     4: 'danger'
   }
   return map[status] || ''
+}
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 const fetchData = async () => {
@@ -220,21 +241,6 @@ const handleReset = () => {
 const handleDetail = (row: Order) => {
   detailData.value = row
   detailVisible.value = true
-}
-
-const handleConfirm = async (row: Order) => {
-  try {
-    await ElMessageBox.confirm('确定要确认该订单吗？', '提示', {
-      type: 'warning'
-    })
-    await request.post(`/order/${row.id}/confirm`)
-    ElMessage.success('订单已确认')
-    fetchData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('确认订单失败:', error)
-    }
-  }
 }
 
 const handleCheckIn = async (row: Order) => {

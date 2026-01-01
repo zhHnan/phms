@@ -12,36 +12,48 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <!-- 图片区 -->
         <div class="h-64 md:h-auto bg-gray-200 rounded-lg flex items-center justify-center text-8xl">
-          {{ getRoomIcon(room.roomType) }}
+          {{ getRoomIcon(room.typeName) }}
         </div>
 
         <!-- 信息区 -->
         <div>
           <div class="flex items-start justify-between mb-4">
-            <h1 class="text-3xl font-bold text-gray-900">{{ getRoomTypeName(room.roomType) }}</h1>
+            <h1 class="text-3xl font-bold text-gray-900">{{ room.typeName }}</h1>
             <span 
               class="px-3 py-1 rounded-full text-sm"
-              :class="room.status === 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+              :class="room.status === 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'"
             >
-              {{ room.status === 0 ? '可预订' : '已占用' }}
+              {{ room.status === 0 ? '可预订' : '已预订' }}
             </span>
           </div>
 
           <p class="text-gray-500 mb-4">房间号: {{ room.roomNo }}</p>
 
           <div class="text-3xl font-bold text-primary-600 mb-6">
-            ¥{{ room.price }}
+            ¥{{ room.pricePerNight }}
             <span class="text-lg text-gray-500">/天</span>
           </div>
 
           <div class="space-y-4 mb-8">
             <div class="flex items-center text-gray-600">
               <span class="w-24">容量:</span>
-              <span>{{ room.capacity }}只宠物</span>
+              <span>{{ room.maxPetNum }}只宠物</span>
             </div>
-            <div class="flex items-start text-gray-600">
+            <div v-if="getRoomFeatures(room.features).length > 0" class="flex items-start text-gray-600">
               <span class="w-24 flex-shrink-0">设施:</span>
-              <span>{{ room.description || '舒适的休息区、饮水器、喂食器、玩具' }}</span>
+              <div class="flex flex-wrap gap-2">
+                <span 
+                  v-for="(feature, idx) in getRoomFeatures(room.features)" 
+                  :key="idx"
+                  class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm"
+                >
+                  {{ feature }}
+                </span>
+              </div>
+            </div>
+            <div v-if="room.description" class="flex items-start text-gray-600">
+              <span class="w-24 flex-shrink-0">介绍:</span>
+              <span>{{ room.description }}</span>
             </div>
           </div>
 
@@ -63,10 +75,10 @@
       </div>
 
       <!-- 详细描述 -->
-      <div class="mt-8 pt-8 border-t">
+      <div v-if="room.description" class="mt-8 pt-8 border-t">
         <h2 class="text-xl font-semibold mb-4">房间介绍</h2>
         <div class="prose text-gray-600">
-          <p>{{ room.description || getDefaultDescription(room.roomType) }}</p>
+          <p>{{ room.description }}</p>
         </div>
       </div>
     </div>
@@ -81,43 +93,34 @@ import request from '@/utils/request'
 interface Room {
   id: number
   roomNo: string
-  roomType: string
-  price: number
-  capacity: number
+  typeName: string
+  pricePerNight: number
+  maxPetNum: number
   status: number
   description: string
+  features?: string
 }
 
 const route = useRoute()
 const room = ref<Room | null>(null)
 const loading = ref(true)
 
-const getRoomTypeName = (type: string) => {
-  const map: Record<string, string> = {
-    cat_standard: '猫咪标间',
-    cat_deluxe: '猫咪豪华间',
-    dog_standard: '狗狗标间',
-    dog_deluxe: '狗狗豪华间',
-    vip_suite: 'VIP套间'
-  }
-  return map[type] || type
+// 根据房型名称获取图标
+const getRoomIcon = (typeName: string) => {
+  const name = typeName.toLowerCase()
+  if (name.includes('猫') || name.includes('cat')) return '🐱'
+  if (name.includes('狗') || name.includes('dog') || name.includes('犬')) return '🐕'
+  return '🏠'
 }
 
-const getRoomIcon = (type: string) => {
-  if (type.startsWith('cat')) return '🐱'
-  if (type.startsWith('dog')) return '🐕'
-  return '👑'
-}
-
-const getDefaultDescription = (type: string) => {
-  const map: Record<string, string> = {
-    cat_standard: '专为猫咪设计的温馨房间，配备舒适的猫窝、猫爬架和各种玩具。房间保持恒温恒湿，确保猫咪舒适度过每一天。',
-    cat_deluxe: '豪华猫咪套房，超大活动空间，配备高级猫爬架、猫跳台和丰富的互动玩具。独立阳光休息区，让您的猫咪享受惬意时光。',
-    dog_standard: '宽敞明亮的狗狗房间，适合中小型犬居住。配备舒适狗窝、食水器具和玩具。每日安排户外活动时间。',
-    dog_deluxe: '豪华狗狗套房，超大活动空间，配备高端狗窝和丰富玩具。包含专属户外活动区域，满足狗狗的运动需求。',
-    vip_suite: 'VIP尊贵套房，顶级配置的宠物房间。独立空调系统、高端床具、专属活动区域。24小时专人照护，尊享贵宾服务。'
+// 解析设施标签
+const getRoomFeatures = (featuresJson: string | undefined) => {
+  if (!featuresJson) return []
+  try {
+    return JSON.parse(featuresJson)
+  } catch (e) {
+    return []
   }
-  return map[type] || '舒适温馨的宠物房间，让您的爱宠宾至如归。'
 }
 
 const fetchRoom = async () => {

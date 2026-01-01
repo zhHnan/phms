@@ -27,6 +27,9 @@ public class Pet extends BaseEntity {
     @Schema(description = "宠物类型：1=猫 2=狗 3=异宠")
     private Integer type;
 
+    @Schema(description = "宠物年龄（岁）")
+    private Integer age;
+
     @Schema(description = "宠物体重（kg）")
     private BigDecimal weight;
 
