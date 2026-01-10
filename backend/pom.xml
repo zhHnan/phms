@@ -23,6 +23,7 @@
         <sa-token.version>1.38.0</sa-token.version>
         <hutool.version>5.8.25</hutool.version>
         <knife4j.version>4.4.0</knife4j.version>
+        <minio.version>8.5.7</minio.version>
     </properties>
 
     <dependencies>
@@ -93,6 +94,19 @@
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
             <version>${knife4j.version}</version>
+        </dependency>
+
+        <!-- MinIO 对象存储 -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>${minio.version}</version>
+        </dependency>
+
+        <!-- RabbitMQ 消息队列 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
         <!-- Lombok -->

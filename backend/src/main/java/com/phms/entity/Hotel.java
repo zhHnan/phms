@@ -33,4 +33,7 @@ public class Hotel extends BaseEntity {
 
     @Schema(description = "状态：1=营业 0=停业")
     private Integer status;
+
+    @Schema(description = "酒店图片URL列表（JSON数组）")
+    private String images;
 }

@@ -69,7 +69,7 @@ public class RoomController {
     @Operation(summary = "根据ID查询房间详情")
     @GetMapping("/{id}")
     public Result<Room> getById(@PathVariable Long id) {
-        return Result.success(roomService.getById(id));
+        return Result.success(roomService.getDetailWithHotel(id));
     }
 
     @Operation(summary = "新增房间")
@@ -97,6 +97,16 @@ public class RoomController {
     public Result<Void> delete(@PathVariable Long id) {
         roomService.removeById(id);
         return Result.success();
+    }
+
+    @Operation(summary = "检查房间在指定日期是否可预订")
+    @GetMapping("/check-availability")
+    public Result<Boolean> checkAvailability(
+            @Parameter(description = "房间ID") @RequestParam Long roomId,
+            @Parameter(description = "入住日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate checkInDate,
+            @Parameter(description = "离店日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate checkOutDate) {
+        boolean available = roomService.checkAvailability(roomId, checkInDate, checkOutDate);
+        return Result.success(available);
     }
 
     @Operation(summary = "修改房间状态")

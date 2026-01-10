@@ -65,4 +65,23 @@ public class RoomServiceImpl extends ServiceImpl<RoomMapper, Room> implements Ro
                 .eq(hotelId != null, Room::getHotelId, hotelId)
                 .list();
     }
+
+    @Override
+    public boolean checkAvailability(Long roomId, LocalDate checkInDate, LocalDate checkOutDate) {
+        // 检查房间是否存在且状态为空闲
+//        Room room = getById(roomId);
+//        if (room == null || room.getStatus() != Constants.ROOM_STATUS_FREE) {
+//            return false;
+//        }
+        
+        // 检查指定时间段是否有订单冲突
+        // 返回冲突订单数量，0表示无冲突（可预订）
+        int conflictCount = baseMapper.countConflictOrders(roomId, checkInDate, checkOutDate);
+        return conflictCount == 0;
+    }
+
+    @Override
+    public Room getDetailWithHotel(Long id) {
+        return baseMapper.selectByIdWithHotel(id);
+    }
 }

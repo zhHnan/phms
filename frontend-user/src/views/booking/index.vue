@@ -15,7 +15,9 @@
             {{ getRoomIcon(room?.typeName || '') }}
           </div>
           <div>
-            <h3 class="text-xl font-semibold">{{ room?.typeName }}</h3>
+            <h3 class="text-xl font-semibold">{{ roomTypeDisplay }}</h3>
+            <p v-if="room?.hotelName" class="text-gray-500">{{ room.hotelName }}</p>
+            <p v-if="room?.hotelAddress" class="text-gray-500">{{ room.hotelAddress }}</p>
             <p class="text-gray-500">房间号: {{ room?.roomNo }}</p>
             <p class="text-primary-600 font-bold">¥{{ room?.pricePerNight }}/天</p>
           </div>
@@ -66,6 +68,14 @@
           </h2>
         </div>
         
+        <!-- 房间类型提示 -->
+        <div v-if="!isVIPRoom" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+          ℹ️ {{ getRoomTypeRestriction() }}
+        </div>
+        <div v-else class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 text-sm">
+          ✨ 仅VIP间允许不同宠物一起居住
+        </div>
+        
         <div v-if="pets.length > 0" class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             选择宠物（最多 {{ room?.maxPetNum || 1 }} 只）
@@ -74,9 +84,12 @@
             <div 
               v-for="pet in pets" 
               :key="pet.id"
-              @click="togglePet(pet.id)"
+              @click="togglePet(pet.id, pet.type)"
               class="p-4 border rounded-lg cursor-pointer transition-all relative"
-              :class="selectedPets.includes(pet.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'"
+              :class="[
+                { 'opacity-50 cursor-not-allowed': !isPetTypeAllowed(pet.type) },
+                selectedPets.includes(pet.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
+              ]"
             >
               <!-- 选中标记 -->
               <div v-if="selectedPets.includes(pet.id)" class="absolute top-2 right-2 w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center text-white text-xs">
@@ -92,6 +105,11 @@
           <!-- 容量警告 -->
           <div v-if="selectedPets.length > (room?.maxPetNum || 1)" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             ⚠️ 已超出房间最大容量（{{ room?.maxPetNum }} 只），请减少宠物数量
+          </div>
+          
+          <!-- 宠物类型不兼容警告 -->
+          <div v-if="!isVIPRoom && selectedPets.length > 1 && !areSelectedPetsCompatible" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            ⚠️ 该房间不允许不同类型的宠物一起居住，请选择相同类型的宠物或预订VIP套间
           </div>
         </div>
 
@@ -190,9 +208,12 @@ interface Room {
   id: number
   roomNo: string
   typeName: string
+  typeNameDisplay?: string
   pricePerNight: number
   maxPetNum: number
   hotelId: number
+  hotelName?: string
+  hotelAddress?: string
 }
 
 interface Pet {
@@ -212,21 +233,40 @@ const addingPet = ref(false)
 const showAddPet = ref(false)
 
 const room = ref<Room | null>(null)
+const roomTypeDisplay = computed(() => room.value?.typeNameDisplay || room.value?.typeName || '')
 const pets = ref<Pet[]>([])
 const selectedPets = ref<number[]>([]) // 选中的宠物ID列表
 
-const today = new Date().toISOString().split('T')[0]
+const formatLocalDate = (d: Date) => {
+  const y = d.getFullYear()
+  const m = `${d.getMonth() + 1}`.padStart(2, '0')
+  const day = `${d.getDate()}`.padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
-// 获取默认日期（明天和后天）
+const today = formatLocalDate(new Date())
+
+// 获取默认日期（优先从URL参数获取，否则使用明天和后天）
 const getDefaultDates = () => {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const dayAfter = new Date()
-  dayAfter.setDate(dayAfter.getDate() + 4) // 默认住3天
+  // 先尝试从URL参数获取
+  const checkInFromQuery = route.query.checkInDate as string
+  const checkOutFromQuery = route.query.checkOutDate as string
+  
+  if (checkInFromQuery && checkOutFromQuery) {
+    return {
+      checkIn: checkInFromQuery,
+      checkOut: checkOutFromQuery
+    }
+  }
+  
+  // 没有URL参数时使用默认值（入住默认今天，退房默认+3天）
+  const todayDate = new Date()
+  const defaultCheckOut = new Date(todayDate)
+  defaultCheckOut.setDate(todayDate.getDate() + 3)
   
   return {
-    checkIn: tomorrow.toISOString().split('T')[0],
-    checkOut: dayAfter.toISOString().split('T')[0]
+    checkIn: formatLocalDate(todayDate),
+    checkOut: formatLocalDate(defaultCheckOut)
   }
 }
 
@@ -238,6 +278,13 @@ const form = reactive({
   remark: ''
 })
 
+// 解析日期字符串为 Date（忽略时区偏移导致的跨天问题）
+const parseDate = (dateStr: string) => {
+  // dateStr 形如 "2024-01-10"
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 const petForm = reactive({
   name: '',
   type: '' as number | '',
@@ -246,18 +293,90 @@ const petForm = reactive({
   notes: ''
 })
 
+// 判断是否是VIP房间
+const isVIPRoom = computed(() => {
+  const typeName = room.value?.typeName?.toLowerCase() || ''
+  return typeName.includes('vip') || typeName.includes('套间')
+})
+
+// 判断宠物类型是否允许
+const isPetTypeAllowed = (petType: number) => {
+  // VIP房间允许所有类型
+  if (isVIPRoom.value) return true
+  
+  const roomTypeName = room.value?.typeName?.toLowerCase() || ''
+  
+  // 猫咪房间只允许猫
+  if (roomTypeName.includes('猫') || roomTypeName.includes('cat')) {
+    return petType === 1
+  }
+  
+  // 狗狗房间只允许狗
+  if (roomTypeName.includes('狗') || roomTypeName.includes('dog') || roomTypeName.includes('犬')) {
+    return petType === 2
+  }
+  
+  // 其他房间类型默认允许
+  return true
+}
+
+// 获取房间类型限制说明
+const getRoomTypeRestriction = () => {
+  const roomTypeName = room.value?.typeName?.toLowerCase() || ''
+  
+  if (roomTypeName.includes('猫') || roomTypeName.includes('cat')) {
+    return '该房间仅限猫咪入住'
+  }
+  
+  if (roomTypeName.includes('狗') || roomTypeName.includes('dog') || roomTypeName.includes('犬')) {
+    return '该房间仅限狗狗入住'
+  }
+  
+  return ''
+}
+
+// 检查已选宠物是否类型兼容
+const areSelectedPetsCompatible = computed(() => {
+  if (selectedPets.value.length <= 1) return true
+  if (isVIPRoom.value) return true
+  
+  const selectedPetTypes = selectedPets.value.map(petId => {
+    const pet = pets.value.find(p => p.id === petId)
+    return pet?.type
+  }).filter(Boolean)
+  
+  // 检查是否所有宠物类型都相同
+  return new Set(selectedPetTypes).size === 1
+})
+
 // 切换宠物选择
-const togglePet = (petId: number) => {
+const togglePet = (petId: number, petType: number) => {
   const index = selectedPets.value.indexOf(petId)
   if (index > -1) {
     // 已选中，取消选择
     selectedPets.value.splice(index, 1)
   } else {
-    // 未选中，检查是否超出容量
+    // 检查宠物类型是否允许
+    if (!isPetTypeAllowed(petType)) {
+      showWarning(`该房间不允许该类型的宠物入住，请选择其他宠物或预订VIP套间`)
+      return
+    }
+    
+    // 检查是否超出容量
     if (selectedPets.value.length >= (room.value?.maxPetNum || 1)) {
       showWarning(`该房间最多容纳 ${room.value?.maxPetNum} 只宠物`)
       return
     }
+    
+    // 非VIP房间，检查宠物类型是否兼容
+    if (!isVIPRoom.value && selectedPets.value.length > 0) {
+      const firstSelectedPet = pets.value.find(p => p.id === selectedPets.value[0])
+      if (firstSelectedPet && firstSelectedPet.type !== petType) {
+        showWarning('该房间不允许不同类型的宠物一起居住，仅VIP间允许混搭')
+        return
+      }
+    }
+    
     selectedPets.value.push(petId)
   }
 }
@@ -297,6 +416,7 @@ const totalPrice = computed(() => {
 const canSubmit = computed(() => {
   return selectedPets.value.length > 0 && 
          selectedPets.value.length <= (room.value?.maxPetNum || 1) &&
+         areSelectedPetsCompatible.value &&
          form.checkInDate && 
          form.checkOutDate && 
          days.value > 0
@@ -366,25 +486,40 @@ const handleAddPet = async () => {
 }
 
 const handleSubmit = async () => {
-  if (!canSubmit.value) {
-    if (selectedPets.value.length === 0) {
-      showWarning('请至少选择一只宠物')
-    } else if (selectedPets.value.length > (room.value?.maxPetNum || 1)) {
-      showWarning(`该房间最多容纳 ${room.value?.maxPetNum} 只宠物，请减少选择`)
-    } else if (!form.checkInDate || !form.checkOutDate) {
-      showWarning('请选择入住和退房日期')
-    }
+  // 基础必填
+  if (!form.checkInDate || !form.checkOutDate) {
+    showWarning('请选择入住和退房日期')
     return
   }
-  
-  // 校验退房日期必须晚于入住日期
-  if (form.checkInDate && form.checkOutDate) {
-    const checkIn = new Date(form.checkInDate)
-    const checkOut = new Date(form.checkOutDate)
-    if (checkOut <= checkIn) {
-      showWarning('退房日期必须晚于入住日期')
-      return
-    }
+
+  const todayDate = parseDate(today)
+  const checkIn = parseDate(form.checkInDate)
+  const checkOut = parseDate(form.checkOutDate)
+
+  // 不允许选择今天之前的日期
+  if (checkIn < todayDate) {
+    showWarning('入住日期不能早于今天')
+    return
+  }
+
+  // 退房必须晚于入住
+  if (checkOut <= checkIn) {
+    showWarning('退房日期必须晚于入住日期')
+    return
+  }
+
+  // 校验宠物数量与类型
+  if (selectedPets.value.length === 0) {
+    showWarning('请至少选择一只宠物')
+    return
+  }
+  if (selectedPets.value.length > (room.value?.maxPetNum || 1)) {
+    showWarning(`该房间最多容纳 ${room.value?.maxPetNum} 只宠物，请减少选择`)
+    return
+  }
+  if (!areSelectedPetsCompatible.value) {
+    showWarning('该房间不允许不同类型的宠物一起居住，仅VIP间允许混搭')
+    return
   }
   
   submitting.value = true
@@ -398,7 +533,7 @@ const handleSubmit = async () => {
       remark: form.remark
     })
     const orderData = res.data || res
-    showSuccess('预订成功！订单号：' + orderData.orderNo)
+    showSuccess(`预订成功！订单号：${orderData.orderNo}\n请在1分钟内完成支付，否则订单将被自动取消`)
     router.push('/orders')
   } catch (error: any) {
     showError(error.response?.data?.message || error.message || '预订失败')

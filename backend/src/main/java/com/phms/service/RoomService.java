@@ -75,4 +75,19 @@ public interface RoomService extends IService<Room> {
      * @return 统计结果
      */
     List<Room> countByStatus(Long hotelId);
+
+    /**
+     * 检查房间在指定日期是否可预订
+     *
+     * @param roomId       房间ID
+     * @param checkInDate  入住日期
+     * @param checkOutDate 离店日期
+     * @return 是否可预订
+     */
+    boolean checkAvailability(Long roomId, LocalDate checkInDate, LocalDate checkOutDate);
+
+    /**
+     * 根据ID查询房间详情（包含所属酒店名称与地址）
+     */
+    Room getDetailWithHotel(Long id);
 }

@@ -53,6 +53,7 @@ public class StaffServiceImpl extends ServiceImpl<StaffMapper, Staff> implements
                     return vo;
                 })
                 .collect(Collectors.toList()));
+        res.setTotal(staffPage.getTotal());
         return res;
     }
 
@@ -83,5 +84,17 @@ public class StaffServiceImpl extends ServiceImpl<StaffMapper, Staff> implements
             wrapper.ne(Staff::getId, excludeId);
         }
         return count(wrapper) > 0;
+    }
+
+    @Override
+    public java.util.List<Staff> listEnabledByHotel(Long hotelId) {
+        if (hotelId == null) {
+            return java.util.Collections.emptyList();
+        }
+        return lambdaQuery()
+                .eq(Staff::getHotelId, hotelId)
+                .eq(Staff::getStatus, Constants.STATUS_ENABLE)
+                .ne(Staff::getRoleType, Constants.ROLE_ADMIN)
+                .list();
     }
 }

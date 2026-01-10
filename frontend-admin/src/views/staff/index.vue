@@ -2,7 +2,7 @@
   <div class="page-container">
     <!-- 搜索表单 -->
     <el-card shadow="never" class="search-form">
-      <el-form :inline="true" :model="searchForm">
+      <el-form class="search-form-inner" :inline="true" :model="searchForm">
         <el-form-item label="员工姓名">
           <el-input v-model="searchForm.realName" placeholder="请输入员工姓名" clearable />
         </el-form-item>
@@ -338,6 +338,21 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.search-form {
+  :deep(.el-form-item) {
+    margin-right: 16px;
+  }
+
+  // 搜索区的输入框/下拉框默认宽度较窄，会导致选项文本不显示完整
+  :deep(.el-form-item .el-input) {
+    width: 200px;
+  }
+
+  :deep(.el-form-item .el-select) {
+    width: 200px;
+  }
+}
+
 .pagination {
   margin-top: 20px;
   justify-content: flex-end;

@@ -70,8 +70,24 @@
                 :style="{ width: hotels.length <= 3 ? 'calc(33.333% - 1rem)' : '350px', minWidth: '300px' }"
                 @click="goToHotelRooms(hotel.id)"
               >
-                <div class="h-48 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg mb-4 flex items-center justify-center text-6xl">
-                  🏨
+                <!-- 酒店图片或默认图标 -->
+                <div class="h-48 rounded-lg mb-4 overflow-hidden relative">
+                  <img 
+                    v-if="parseImages(hotel.images).length > 0"
+                    :src="parseImages(hotel.images)[0]"
+                    :alt="hotel.name"
+                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div v-else class="w-full h-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-6xl">
+                    🏨
+                  </div>
+                  <!-- 图片数量角标 -->
+                  <div 
+                    v-if="parseImages(hotel.images).length > 1"
+                    class="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded"
+                  >
+                    {{ parseImages(hotel.images).length }}张
+                  </div>
                 </div>
                 <h3 class="text-xl font-semibold mb-2">{{ hotel.name }}</h3>
                 <div class="space-y-2 mb-4">
@@ -155,6 +171,16 @@ import { getHotelList, type Hotel } from '@/api'
 const router = useRouter()
 const hotels = ref<Hotel[]>([])
 const loading = ref(false)
+
+// 解析图片JSON字符串
+const parseImages = (images: string | undefined): string[] => {
+  if (!images) return []
+  try {
+    return JSON.parse(images)
+  } catch {
+    return []
+  }
+}
 
 // 获取酒店列表
 const fetchHotels = async () => {

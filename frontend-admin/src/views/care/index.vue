@@ -363,6 +363,31 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.search-form {
+  :deep(.el-form--inline) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  :deep(.el-form--inline .el-form-item) {
+    margin-right: 16px;
+    margin-bottom: 12px;
+  }
+
+  :deep(.el-form-item .el-input),
+  :deep(.el-form-item .el-select) {
+    width: 220px;
+  }
+}
+
+.pagination {
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+</style>
+
+<style lang="scss" scoped>
 .pagination {
   margin-top: 20px;
   justify-content: flex-end;

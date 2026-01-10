@@ -138,3 +138,24 @@ export interface DashboardVO {
     maintenanceRooms: number
     totalRooms: number
 }
+
+// 消息中心
+export interface MessageCenter {
+    id: number
+    hotelId: number | null
+    receiverType: number
+    receiverId: number | null
+    title: string
+    content: string
+    isRead: number
+    readTime: string | null
+    createdAt: string
+    updatedAt: string
+}
+
+export interface MessageReadVO {
+    id: number
+    isRead: number
+    readTime: string | null
+    alreadyRead: boolean
+}

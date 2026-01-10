@@ -33,7 +33,7 @@
             {{ getRoomIcon(order.roomType) }}
           </div>
           <div>
-            <p class="font-semibold text-lg">{{ getRoomTypeName(order.roomType) }}</p>
+            <p class="font-semibold text-lg">{{ order.roomTypeDisplay || getRoomTypeName(order.roomType) }}</p>
             <p class="text-gray-500">房间号: {{ order.roomNo }}</p>
           </div>
         </div>

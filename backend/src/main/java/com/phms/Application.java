@@ -3,6 +3,7 @@ package com.phms;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 宠物酒店管理系统启动类
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author PHMS
  */
 @SpringBootApplication
+@EnableScheduling
 @MapperScan("com.phms.mapper")
 public class Application {
 

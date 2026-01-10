@@ -135,6 +135,21 @@ const routes: RouteRecordRaw[] = [
         ]
     },
     {
+        path: '/message',
+        name: 'Message',
+        component: () => import('@/layout/index.vue'),
+        redirect: '/message/list',
+        meta: { title: '消息中心', icon: 'Bell' },
+        children: [
+            {
+                path: 'list',
+                name: 'MessageList',
+                component: () => import('@/views/message/index.vue'),
+                meta: { title: '消息中心' }
+            }
+        ]
+    },
+    {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('@/views/error/404.vue'),
@@ -148,7 +163,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
     const userStore = useUserStore()
 
     if (to.path === '/login') {

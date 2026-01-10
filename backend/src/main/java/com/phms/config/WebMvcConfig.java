@@ -51,7 +51,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                             "/actuator/**",
                             // 静态资源
                             "/favicon.ico",
-                            "/error"
+                            "/error",
+                            "/test/**",
+                            // 文件上传（Controller层已做权限控制）
+                            "/upload/**"
                     )
                     .check(r -> StpUtil.checkLogin());
         })).addPathPatterns("/**");

@@ -21,8 +21,9 @@
       <div v-for="pet in pets" :key="pet.id" class="card">
         <div class="flex items-start justify-between">
           <div class="flex items-center space-x-4">
-            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl">
-              {{ pet.type === 1 ? '🐱' : pet.type === 2 ? '🐕' : '🐰' }}
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl overflow-hidden">
+              <img v-if="pet.photoUrl" :src="pet.photoUrl" :alt="pet.name" class="w-full h-full object-cover" />
+              <span v-else>{{ pet.type === 1 ? '🐱' : pet.type === 2 ? '🐕' : '🐰' }}</span>
             </div>
             <div>
               <h3 class="text-xl font-semibold">{{ pet.name }}</h3>
@@ -55,6 +56,33 @@
       <div class="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-semibold mb-4">{{ editingPet ? '编辑宠物' : '添加宠物' }}</h3>
         <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">宠物照片</label>
+            <div class="flex items-center space-x-4">
+              <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                <img v-if="form.photoUrl" :src="form.photoUrl" alt="宠物照片" class="w-full h-full object-cover" />
+                <span v-else class="text-3xl">{{ form.type === 1 ? '🐱' : form.type === 2 ? '🐕' : form.type === 3 ? '🐰' : '📷' }}</span>
+              </div>
+              <div class="flex-1">
+                <input 
+                  ref="fileInput"
+                  type="file" 
+                  accept="image/*" 
+                  @change="handleImageChange" 
+                  class="hidden"
+                />
+                <button 
+                  type="button"
+                  @click="fileInput?.click()" 
+                  class="btn-secondary text-sm"
+                  :disabled="uploading"
+                >
+                  {{ uploading ? '上传中...' : form.photoUrl ? '更换照片' : '上传照片' }}
+                </button>
+                <p class="text-xs text-gray-500 mt-1">支持 JPG、PNG 格式</p>
+              </div>
+            </div>
+          </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">宠物名称 *</label>
             <input v-model="form.name" required class="input-field" placeholder="请输入宠物名称" />
@@ -106,20 +134,24 @@ interface Pet {
   age: number | null
   weight: number | null
   notes: string
+  photoUrl?: string
 }
 
 const pets = ref<Pet[]>([])
 const loading = ref(true)
 const submitting = ref(false)
+const uploading = ref(false)
 const showAddModal = ref(false)
 const editingPet = ref<Pet | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
   name: '',
   type: '' as number | '',
   age: null as number | null,
   weight: null as number | null,
-  notes: ''
+  notes: '',
+  photoUrl: ''
 })
 
 const fetchPets = async () => {
@@ -140,8 +172,49 @@ const resetForm = () => {
     type: '',
     age: null,
     weight: null,
-    notes: ''
+    notes: '',
+    photoUrl: ''
   })
+}
+
+const handleImageChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  // 检查文件类型
+  if (!file.type.startsWith('image/')) {
+    showWarning('请上传图片文件')
+    return
+  }
+
+  // 检查文件大小（限制5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    showWarning('图片大小不能超过5MB')
+    return
+  }
+
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('bucket', 'phms')
+
+    const res = await request.post('/upload/single', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    form.photoUrl = res.data.url
+    showSuccess('照片上传成功')
+  } catch (error: any) {
+    showError(error.message || '照片上传失败')
+  } finally {
+    uploading.value = false
+    // 清空input，允许重复选择同一文件
+    if (target) target.value = ''
+  }
 }
 
 const closeModal = () => {
@@ -157,7 +230,8 @@ const editPet = (pet: Pet) => {
     type: pet.type,
     age: pet.age,
     weight: pet.weight,
-    notes: pet.notes
+    notes: pet.notes,
+    photoUrl: pet.photoUrl || ''
   })
   showAddModal.value = true
 }
@@ -190,11 +264,11 @@ const handleSubmit = async () => {
     
     if (editingPet.value) {
       await request.put('/pet', { ...petData, id: editingPet.value.id })
-      await fetchPets()  // 重新获取列表
+      await fetchPets()
       showSuccess('修改成功')
     } else {
       await request.post('/pet', petData)
-      await fetchPets()  // 重新获取列表
+      await fetchPets()
       showSuccess('添加成功')
     }
     closeModal()

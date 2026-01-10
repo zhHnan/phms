@@ -1,5 +1,5 @@
 import { request } from '@/utils/request'
-import type { Result, PageResult, Hotel, Staff, Room, Order, CareLog, LoginLog, OperationLog, DashboardVO } from './types'
+import type { Result, PageResult, Hotel, Staff, Room, Order, CareLog, LoginLog, OperationLog, DashboardVO, MessageCenter, MessageReadVO } from './types'
 
 // ==================== 门店管理 ====================
 export const getHotelPage = (params: any): Promise<Result<PageResult<Hotel>>> => {
@@ -102,4 +102,17 @@ export const getOperationLogPage = (params: any): Promise<Result<PageResult<Oper
 // ==================== 仪表盘 ====================
 export const getDashboardData = (): Promise<Result<DashboardVO>> => {
     return request.get('/dashboard')
+}
+
+// ==================== 消息中心 ====================
+export const getMessagePage = (params: any): Promise<Result<PageResult<MessageCenter>>> => {
+    return request.get('/message/page', { params })
+}
+
+export const markMessageRead = (id: number): Promise<Result<MessageReadVO>> => {
+    return request.put(`/message/${id}/read`)
+}
+
+export const markAllMessagesRead = (): Promise<Result<number>> => {
+    return request.put('/message/read-all')
 }

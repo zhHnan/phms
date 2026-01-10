@@ -4,8 +4,8 @@
 
     <!-- 筛选条件 -->
     <div class="card mb-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-        <div>
+      <div class="flex flex-wrap gap-4 items-end">
+        <div class="w-48">
           <label class="block text-sm font-medium text-gray-700 mb-1">门店</label>
           <select v-model="filters.hotelId" class="input-field">
             <option value="">全部门店</option>
@@ -14,27 +14,21 @@
             </option>
           </select>
         </div>
-        <div>
+        <div class="w-48">
           <label class="block text-sm font-medium text-gray-700 mb-1">房间类型</label>
           <select v-model="filters.roomType" class="input-field">
             <option value="">全部类型</option>
-            <option value="豪华猫屋">豪华猫屋</option>
-            <option value="标准狗舍">标准狗舍</option>
-            <option value="豪华狗舍">豪华狗舍</option>
-            <option value="猫">所有猫房</option>
-            <option value="狗">所有狗房</option>
+            <option value="cat_standard">猫咪标间</option>
+            <option value="cat_deluxe">猫咪豪华间</option>
+            <option value="dog_standard">狗狗标间</option>
+            <option value="dog_deluxe">狗狗豪华间</option>
+            <option value="vip_suite">VIP套间</option>
           </select>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">入住日期</label>
-          <input type="date" v-model="filters.checkInDate" class="input-field" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">退房日期</label>
-          <input type="date" v-model="filters.checkOutDate" class="input-field" />
-        </div>
-        <div>
-          <button @click="handleSearch" class="btn-primary w-full">搜索</button>
+        <div class="ml-auto">
+          <button @click="handleSearch" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">
+            筛选
+          </button>
         </div>
       </div>
     </div>
@@ -57,17 +51,25 @@
         class="card hover:shadow-lg transition-shadow cursor-pointer"
         @click="$router.push(`/rooms/${room.id}`)"
       >
-        <div class="h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center text-6xl">
-          {{ getRoomIcon(room.typeName) }}
+        <!-- 图片轮播或默认图标 -->
+        <div class="h-48 bg-gray-200 rounded-lg mb-4 overflow-hidden relative">
+          <div v-if="getRoomImages(room.images).length > 0" class="w-full h-full">
+            <img 
+              :src="getRoomImages(room.images)[0]" 
+              :alt="room.typeName"
+              class="w-full h-full object-cover"
+            />
+            <div v-if="getRoomImages(room.images).length > 1" 
+                 class="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+              共{{ getRoomImages(room.images).length }}张
+            </div>
+          </div>
+          <div v-else class="w-full h-full flex items-center justify-center text-6xl">
+            {{ getRoomIcon(room.typeName) }}
+          </div>
         </div>
         <div class="flex justify-between items-start mb-2">
-          <h3 class="text-xl font-semibold">{{ room.typeName }}</h3>
-          <span 
-            class="px-2 py-1 text-xs rounded-full"
-            :class="room.status === 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'"
-          >
-            {{ room.status === 0 ? '可预订' : '已预订' }}
-          </span>
+          <h3 class="text-xl font-semibold">{{ room.typeNameDisplay || room.typeName }}</h3>
         </div>
         <p class="text-gray-500 text-sm mb-2">房间号: {{ room.roomNo }}</p>
         <p v-if="room.hotelName" class="text-gray-500 text-sm mb-2">门店: {{ room.hotelName }}</p>
@@ -90,72 +92,88 @@
             <span class="text-sm text-gray-500">/天</span>
           </span>
           <button 
-            v-if="room.status === 0"
-            @click.stop="$router.push(`/booking/${room.id}`)"
+            @click.stop="$router.push(`/rooms/${room.id}`)"
             class="btn-primary"
           >
-            立即预订
+            查看详情
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 分页 -->
-    <div v-if="total > pageSize" class="flex justify-center mt-8 space-x-2">
-      <button 
-        @click="page--" 
-        :disabled="page === 1"
-        class="btn-secondary disabled:opacity-50"
-      >
-        上一页
-      </button>
-      <span class="px-4 py-2">{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
-      <button 
-        @click="page++" 
-        :disabled="page >= Math.ceil(total / pageSize)"
-        class="btn-secondary disabled:opacity-50"
-      >
-        下一页
-      </button>
+    <!-- 加载更多提示 -->
+    <div v-if="loadingMore" class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-6 w-6 border-4 border-primary-600 border-t-transparent"></div>
+      <p class="mt-2 text-gray-600">加载中...</p>
     </div>
+
+    <!-- 到底提示 -->
+    <div v-if="!loading && !loadingMore && rooms.length >= total && total > 0" class="text-center py-8 text-gray-500">
+      <p>已经到底了，共 {{ total }} 间房间</p>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <transition name="fade">
+      <button
+        v-if="showBackToTop"
+        @click="scrollToTop"
+        class="fixed bottom-8 right-8 bg-primary-600 text-white rounded-full p-4 shadow-lg hover:bg-primary-700 transition-all z-50"
+        title="返回顶部"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      </button>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAvailableRooms, getHotelList, type Room, type Hotel } from '@/api'
-import { showWarning } from '@/utils/message'
 
 const route = useRoute()
 const rooms = ref<Room[]>([])
 const hotels = ref<Hotel[]>([])
 const loading = ref(false)
+const loadingMore = ref(false)
 const page = ref(1)
-const pageSize = ref(9)
+const pageSize = ref(12)
 const total = ref(0)
-
-// 获取默认日期（明天和后天）
-const getDefaultDates = () => {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const dayAfter = new Date()
-  dayAfter.setDate(dayAfter.getDate() + 4) // 默认住3天
-  
-  return {
-    checkIn: tomorrow.toISOString().split('T')[0],
-    checkOut: dayAfter.toISOString().split('T')[0]
-  }
-}
-
-const defaultDates = getDefaultDates()
+const hasMore = ref(true)
+const showBackToTop = ref(false)
 
 const filters = reactive({
   hotelId: '',
-  roomType: '',
-  checkInDate: defaultDates.checkIn,
-  checkOutDate: defaultDates.checkOut
+  roomType: ''
 })
+
+// 滚动监听
+const handleScroll = () => {
+  // 显示/隐藏返回顶部按钮
+  showBackToTop.value = window.scrollY > 300
+
+  // 检测是否滚动到底部
+  const scrollTop = window.scrollY
+  const windowHeight = window.innerHeight
+  const documentHeight = document.documentElement.scrollHeight
+
+  // 距离底部200px时触发加载
+  if (scrollTop + windowHeight >= documentHeight - 200) {
+    if (!loading.value && !loadingMore.value && hasMore.value) {
+      loadMore()
+    }
+  }
+}
+
+// 返回顶部
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
 
 // 从路由参数获取酒店ID
 onMounted(() => {
@@ -163,7 +181,15 @@ onMounted(() => {
     filters.hotelId = route.query.hotelId as string
   }
   fetchHotels()
-  fetchRooms()
+  fetchRooms(true)
+  
+  // 添加滚动监听
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  // 移除滚动监听
+  window.removeEventListener('scroll', handleScroll)
 })
 
 // 获取酒店列表
@@ -194,8 +220,25 @@ const getRoomFeatures = (featuresJson: string | undefined) => {
   }
 }
 
-const fetchRooms = async () => {
-  loading.value = true
+// 解析房间图片
+const getRoomImages = (imagesJson: string | undefined) => {
+  if (!imagesJson) return []
+  try {
+    return JSON.parse(imagesJson)
+  } catch (e) {
+    return []
+  }
+}
+
+const fetchRooms = async (reset = false) => {
+  if (reset) {
+    loading.value = true
+    page.value = 1
+    rooms.value = []
+  } else {
+    loadingMore.value = true
+  }
+
   try {
     const params: any = {
       pageNum: page.value,
@@ -209,39 +252,43 @@ const fetchRooms = async () => {
     if (filters.roomType) {
       params.roomType = filters.roomType
     }
-    
-    if (filters.checkInDate) {
-      params.checkInDate = filters.checkInDate
-    }
-    
-    if (filters.checkOutDate) {
-      params.checkOutDate = filters.checkOutDate
-    }
 
     const res = await getAvailableRooms(params)
-    rooms.value = res.data.records
+    
+    if (reset) {
+      rooms.value = res.data.records
+    } else {
+      rooms.value = [...rooms.value, ...res.data.records]
+    }
+    
     total.value = res.data.total
+    hasMore.value = rooms.value.length < total.value
   } catch (error) {
     console.error('获取房间失败:', error)
   } finally {
     loading.value = false
+    loadingMore.value = false
+  }
+}
+
+// 加载更多
+const loadMore = () => {
+  if (hasMore.value) {
+    page.value++
+    fetchRooms(false)
   }
 }
 
 const handleSearch = () => {
-  // 校验日期先后顺序
-  if (filters.checkInDate && filters.checkOutDate) {
-    const checkIn = new Date(filters.checkInDate)
-    const checkOut = new Date(filters.checkOutDate)
-    if (checkOut <= checkIn) {
-      showWarning('退房日期必须晚于入住日期')
-      return
-    }
-  }
-  
-  page.value = 1
-  fetchRooms()
+  fetchRooms(true)
 }
-
-watch(page, fetchRooms)
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+</style>

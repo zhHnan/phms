@@ -37,6 +37,15 @@
             <p class="text-sm text-gray-500">订单号: {{ order.orderNo }}</p>
             <p class="text-sm text-gray-500">{{ formatDateTime(order.createdAt) }}</p>
             <p v-if="order.hotelName" class="text-sm text-gray-500 mt-1">🏨 {{ order.hotelName }}</p>
+            <!-- 待支付订单显示倒计时 -->
+            <p v-if="order.status === 0" class="text-sm font-medium mt-1" :class="getTimeoutClass(order)">
+              <span v-if="getTimeRemaining(order) > 0">
+                ⏰ {{ formatTimeRemaining(getTimeRemaining(order)) }} 后超时
+              </span>
+              <span v-else class="text-red-600">
+                已超时，订单将被自动取消
+              </span>
+            </p>
           </div>
           <span 
             class="px-3 py-1 rounded-full text-sm"
@@ -58,7 +67,7 @@
               <span v-else class="text-gray-400">未知宠物</span>
             </div>
             <p class="text-gray-500 text-sm">
-              <span v-if="order.roomType">{{ getRoomTypeName(order.roomType) }}</span>
+              <span v-if="order.roomType">{{ order.roomTypeDisplay || getRoomTypeName(order.roomType) }}</span>
               <span v-if="order.roomType && order.roomNo"> · </span>
               <span v-if="order.roomNo">{{ order.roomNo }}</span>
               <span v-if="!order.roomType && !order.roomNo" class="text-gray-400">房间信息不完整</span>
@@ -117,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import request from '@/utils/request'
 import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
 
@@ -182,6 +191,77 @@ const getStatusClass = (status: number) => {
     4: 'bg-red-100 text-red-800'
   }
   return map[status] || 'bg-gray-100 text-gray-800'
+}
+
+// 订单超时倒计时相关
+const ORDER_TIMEOUT_MINUTES = 1 // 1分钟超时
+let countdownTimer: number | null = null
+
+// 计算订单剩余时间（毫秒）
+const getTimeRemaining = (order: Order): number => {
+  if (order.status !== 0) return 0 // 只有待支付订单才有倒计时
+  
+  const createdTime = new Date(order.createdAt).getTime()
+  const timeoutTime = createdTime + ORDER_TIMEOUT_MINUTES * 60 * 1000
+  const now = Date.now()
+  return Math.max(0, timeoutTime - now)
+}
+
+// 格式化剩余时间
+const formatTimeRemaining = (milliseconds: number): string => {
+  const totalSeconds = Math.floor(milliseconds / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}分${seconds}秒`
+}
+
+// 获取倒计时颜色样式
+const getTimeoutClass = (order: Order): string => {
+  const remaining = getTimeRemaining(order)
+  if (remaining === 0) return 'text-red-600'
+  if (remaining < 30 * 1000) return 'text-orange-600' // 低于30秒
+  return 'text-yellow-600'
+}
+
+// 启动倒计时定时器
+const startCountdown = () => {
+  if (countdownTimer) clearInterval(countdownTimer)
+  
+  // 记录已经超时的订单ID
+  const timeoutOrderIds = new Set<number>()
+  
+  countdownTimer = window.setInterval(() => {
+    // 检查是否有订单刚刚超时
+    let hasNewTimeout = false
+    orders.value.forEach(order => {
+      if (order.status === 0) {
+        const remaining = getTimeRemaining(order)
+        if (remaining === 0 && !timeoutOrderIds.has(order.id)) {
+          // 订单刚刚超时
+          timeoutOrderIds.add(order.id)
+          hasNewTimeout = true
+        }
+      }
+    })
+    
+    // 如果有订单刚超时，延迟2秒后刷新列表（给后端处理时间）
+    if (hasNewTimeout) {
+      setTimeout(() => {
+        fetchOrders()
+      }, 2000)
+    }
+    
+    // 强制触发视图更新（更新倒计时显示）
+    orders.value = [...orders.value]
+  }, 1000) // 每秒更新
+}
+
+// 停止倒计时定时器
+const stopCountdown = () => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
 }
 
 const getRoomTypeName = (type: string) => {
@@ -295,5 +375,14 @@ watch(currentTab, () => {
 
 watch(page, fetchOrders)
 
-onMounted(fetchOrders)
+onMounted(() => {
+  fetchOrders()
+  // 启动倒计时定时器
+  startCountdown()
+})
+
+onUnmounted(() => {
+  // 组件销毁时停止定时器
+  stopCountdown()
+})
 </script>

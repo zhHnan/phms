@@ -16,7 +16,7 @@ import java.time.LocalDate;
  */
 @Mapper
 public interface RoomMapper extends BaseMapper<Room> {
-    
+
     /**
      * 分页查询房间列表（关联酒店名称）
      */
@@ -37,28 +37,13 @@ public interface RoomMapper extends BaseMapper<Room> {
                                    @Param("roomNo") String roomNo);
 
     /**
-     * 分页查询可用房间列表（关联酒店名称，检查指定时间段是否有订单冲突）
+     * 分页查询可用房间列表（关联酒店名称）
+     * 返回所有房间，不考虑状态和订单冲突（详情页会单独检查可用性）
      */
     @Select("<script>" +
             "SELECT r.id, r.hotel_id, r.room_no, r.type_name, r.price_per_night, " +
-            "r.max_pet_num, r.features, r.description, r.is_deleted, " +
-            "r.created_at, r.updated_at, h.name as hotel_name, " +
-            // 检查是否有时间段冲突的订单
-            "<if test='checkInDate != null and checkOutDate != null'>" +
-            "  CASE WHEN EXISTS (" +
-            "    SELECT 1 FROM biz_orders o " +
-            "    WHERE o.room_id = r.id " +
-            "    AND o.is_deleted = 0 " +
-            "    AND o.status IN (1, 2) " +  // 待入住、入住中（不包括待支付，因为未付款可能取消）
-            "    AND NOT (" +
-            "      o.check_out_date &lt;= #{checkInDate} OR o.check_in_date &gt;= #{checkOutDate}" +
-            "    )" +
-            "  ) THEN 1 ELSE r.status END " +
-            "</if>" +
-            "<if test='checkInDate == null or checkOutDate == null'>" +
-            "  r.status " +
-            "</if>" +
-            "as status " +
+            "r.max_pet_num, r.features, r.description, r.images, r.is_deleted, " +
+            "r.created_at, r.updated_at, h.name as hotel_name, r.status " +
             "FROM biz_rooms r " +
             "LEFT JOIN sys_hotels h ON r.hotel_id = h.id " +
             "WHERE r.is_deleted = 0 " +
@@ -71,4 +56,29 @@ public interface RoomMapper extends BaseMapper<Room> {
                                              @Param("roomType") String roomType,
                                              @Param("checkInDate") LocalDate checkInDate,
                                              @Param("checkOutDate") LocalDate checkOutDate);
+
+    /**
+     * 查询房间详情（关联酒店名称与地址）
+     */
+    @Select("SELECT r.*, h.name as hotel_name, h.address as hotel_address " +
+            "FROM biz_rooms r " +
+            "LEFT JOIN sys_hotels h ON r.hotel_id = h.id " +
+            "WHERE r.id = #{id} AND r.is_deleted = 0")
+    Room selectByIdWithHotel(@Param("id") Long id);
+
+    /**
+     * 检查房间在指定时间段是否有订单冲突
+     * 返回冲突订单数量，0表示无冲突（可预订）
+     * 冲突条件：新订单的退房日期 > 现有订单的入住日期 AND 新订单的入住日期 < 现有订单的退房日期
+     * 状态说明：0=待支付, 1=待入住, 2=入住中 都算占用房间
+     */
+    @Select("SELECT COUNT(1) FROM biz_orders o " +
+            "WHERE o.room_id = #{roomId} " +
+            "AND o.is_deleted = 0 " +
+            "AND o.status IN (0, 1, 2) " +  // 待支付、待入住、入住中
+            "AND #{checkOutDate} > o.check_in_date " +
+            "AND #{checkInDate} < o.check_out_date")
+    int countConflictOrders(@Param("roomId") Long roomId,
+                           @Param("checkInDate") LocalDate checkInDate,
+                           @Param("checkOutDate") LocalDate checkOutDate);
 }

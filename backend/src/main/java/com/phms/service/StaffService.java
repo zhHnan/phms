@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.phms.entity.Staff;
 import com.phms.vo.StaffInfoVO;
+import java.util.List;
 
 /**
  * 员工 Service
@@ -49,4 +50,12 @@ public interface StaffService extends IService<Staff> {
      * @return true=已存在店长 false=不存在
      */
     boolean hasManager(Long hotelId, Long excludeId);
+
+    /**
+     * 查询指定门店下的有效员工（排除平台超管）
+     *
+     * @param hotelId 门店ID
+     * @return 员工列表
+     */
+    List<Staff> listEnabledByHotel(Long hotelId);
 }
