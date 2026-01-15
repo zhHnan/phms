@@ -90,7 +90,8 @@ public enum ResultCode {
     /**
      * 只有超管有权限修改信息
      */
-    NO_MANAGER_PERMISSION(3001, "只有超管有权限修改信息");
+    NO_MANAGER_PERMISSION(3001, "只有超管有权限修改信息"),
+    NO_PERMISSION(3002, "没有权限");
 
     /**
      * 状态码

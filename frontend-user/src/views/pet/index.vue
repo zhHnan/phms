@@ -2,9 +2,14 @@
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-3xl font-bold text-gray-900">我的宠物</h1>
-      <button @click="showAddModal = true" class="btn-primary">
+      <button @click="openAddModal" class="btn-primary">
         + 添加宠物
       </button>
+    </div>
+
+    <div v-if="!loading" class="mb-6 text-sm text-gray-600">
+      已记录狂犬疫苗：<span class="font-medium">{{ rabiesRecordedCount }}</span>/{{ pets.length }}，
+      已记录驱虫：<span class="font-medium">{{ dewormingRecordedCount }}</span>/{{ pets.length }}
     </div>
 
     <div v-if="loading" class="text-center py-20">
@@ -14,7 +19,7 @@
     <div v-else-if="pets.length === 0" class="text-center py-20">
       <span class="text-6xl">🐾</span>
       <p class="mt-4 text-gray-600">还没有添加宠物</p>
-      <button @click="showAddModal = true" class="btn-primary mt-4">添加宠物</button>
+      <button @click="openAddModal" class="btn-primary mt-4">添加宠物</button>
     </div>
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -43,6 +48,23 @@
           <div>
             <p class="text-gray-500">体重</p>
             <p class="font-medium">{{ pet.weight ? `${pet.weight}kg` : '未知' }}</p>
+          </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <p class="text-gray-700 font-medium mb-2">疫苗/驱虫</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <p class="text-gray-500">狂犬疫苗</p>
+              <p class="font-medium">{{ pet.rabiesVaccineDate ? pet.rabiesVaccineDate : '未记录' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500">驱虫</p>
+              <p class="font-medium">{{ pet.dewormingDate ? pet.dewormingDate : '未记录' }}</p>
+            </div>
+          </div>
+          <div v-if="pet.vaccineNotes" class="mt-2 text-gray-700">
+            备注：{{ pet.vaccineNotes }}
           </div>
         </div>
         <div v-if="pet.notes" class="mt-4 p-3 bg-yellow-50 rounded-lg">
@@ -110,6 +132,22 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">健康/性格备注</label>
             <textarea v-model="form.notes" class="input-field" rows="3" placeholder="如：疫苗情况、过敏源、性格特点等"></textarea>
           </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">狂犬疫苗接种日期</label>
+            <input type="date" v-model="form.rabiesVaccineDate" class="input-field" />
+            <p class="text-xs text-gray-500 mt-1">不清楚可不填</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">驱虫日期</label>
+            <input type="date" v-model="form.dewormingDate" class="input-field" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">疫苗/驱虫备注</label>
+            <textarea v-model="form.vaccineNotes" class="input-field" rows="2" placeholder="如：每3个月驱虫一次、近期打针反应等"></textarea>
+          </div>
           <div class="flex justify-end space-x-4 pt-4">
             <button type="button" @click="closeModal" class="btn-secondary">取消</button>
             <button type="submit" :disabled="submitting" class="btn-primary">
@@ -123,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import request from '@/utils/request'
 import { showSuccess, showError, showWarning, showConfirm } from '@/utils/message'
 
@@ -135,6 +173,9 @@ interface Pet {
   weight: number | null
   notes: string
   photoUrl?: string
+  rabiesVaccineDate?: string | null
+  dewormingDate?: string | null
+  vaccineNotes?: string | null
 }
 
 const pets = ref<Pet[]>([])
@@ -151,8 +192,14 @@ const form = reactive({
   age: null as number | null,
   weight: null as number | null,
   notes: '',
-  photoUrl: ''
+  photoUrl: '',
+  rabiesVaccineDate: '' as string | '',
+  dewormingDate: '' as string | '',
+  vaccineNotes: ''
 })
+
+const rabiesRecordedCount = computed(() => pets.value.filter(p => !!p.rabiesVaccineDate).length)
+const dewormingRecordedCount = computed(() => pets.value.filter(p => !!p.dewormingDate).length)
 
 const fetchPets = async () => {
   loading.value = true
@@ -166,6 +213,20 @@ const fetchPets = async () => {
   }
 }
 
+const today = () => {
+  // YYYY-MM-DD
+  return new Date().toISOString().slice(0, 10)
+}
+
+const openAddModal = () => {
+  editingPet.value = null
+  resetForm()
+  // 默认选中今天（仅新增时）
+  form.rabiesVaccineDate = today()
+  form.dewormingDate = today()
+  showAddModal.value = true
+}
+
 const resetForm = () => {
   Object.assign(form, {
     name: '',
@@ -173,7 +234,10 @@ const resetForm = () => {
     age: null,
     weight: null,
     notes: '',
-    photoUrl: ''
+    photoUrl: '',
+    rabiesVaccineDate: '',
+    dewormingDate: '',
+    vaccineNotes: ''
   })
 }
 
@@ -231,7 +295,10 @@ const editPet = (pet: Pet) => {
     age: pet.age,
     weight: pet.weight,
     notes: pet.notes,
-    photoUrl: pet.photoUrl || ''
+    photoUrl: pet.photoUrl || '',
+    rabiesVaccineDate: pet.rabiesVaccineDate || '',
+    dewormingDate: pet.dewormingDate || '',
+    vaccineNotes: pet.vaccineNotes || ''
   })
   showAddModal.value = true
 }
@@ -255,11 +322,18 @@ const handleSubmit = async () => {
     return
   }
 
+  if (form.rabiesVaccineDate && form.dewormingDate && form.rabiesVaccineDate > form.dewormingDate) {
+    // 仅做轻量校验：避免明显的日期填写错误
+  }
+
   submitting.value = true
   try {
     const petData = {
       ...form,
-      type: Number(form.type)
+      type: Number(form.type),
+      rabiesVaccineDate: form.rabiesVaccineDate || null,
+      dewormingDate: form.dewormingDate || null,
+      vaccineNotes: form.vaccineNotes || null
     }
     
     if (editingPet.value) {

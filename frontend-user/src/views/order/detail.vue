@@ -93,22 +93,97 @@
         </div>
       </div>
 
+      <!-- 酒店评价（仅已完成订单） -->
+      <div v-if="order.status === 3" class="card">
+        <h3 class="text-lg font-semibold mb-4">酒店评价</h3>
+
+        <div v-if="review" class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="text-gray-700">
+              <span class="font-medium">评分：</span>
+              <span class="text-yellow-500">
+                <span v-for="n in 5" :key="n">{{ n <= review.score ? '★' : '☆' }}</span>
+              </span>
+              <span class="ml-2 text-sm text-gray-500">({{ review.score }}/5)</span>
+            </div>
+            <div class="text-sm text-gray-500">{{ formatDateTime(review.createdAt) }}</div>
+          </div>
+          <div v-if="review.content" class="p-3 bg-gray-50 rounded-lg text-gray-700">
+            {{ review.content }}
+          </div>
+          <div v-else class="text-sm text-gray-500">未填写文字评价</div>
+        </div>
+
+        <div v-else class="space-y-4">
+          <div>
+            <p class="text-sm text-gray-600 mb-2">满意度（5分为满分）</p>
+            <div class="flex items-center gap-2">
+              <button
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                class="text-2xl"
+                :class="n <= reviewForm.score ? 'text-yellow-500' : 'text-gray-300'"
+                @click="reviewForm.score = n"
+                aria-label="score"
+              >
+                ★
+              </button>
+              <span class="text-sm text-gray-500 ml-2">{{ reviewForm.score }}/5</span>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 mb-2">评价内容（可选）</p>
+            <textarea
+              v-model="reviewForm.content"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all duration-200"
+              rows="3"
+              placeholder="说说你的入住体验吧"
+            ></textarea>
+          </div>
+          <div>
+            <button
+              type="button"
+              class="btn-primary"
+              :disabled="submittingReview"
+              @click="submitReview"
+            >
+              {{ submittingReview ? '提交中...' : '提交评价' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- 照料记录 -->
       <div v-if="order.status === 2 && careLogs.length > 0" class="card">
         <h3 class="text-lg font-semibold mb-4">照料记录</h3>
-        <div class="space-y-4">
-          <div v-for="log in careLogs" :key="log.id" class="p-4 bg-gray-50 rounded-lg">
-            <div class="flex justify-between items-start mb-2">
-              <span 
-                class="px-2 py-1 rounded text-sm"
-                :class="getLogTypeClass(log.logType)"
-              >
-                {{ getLogTypeName(log.logType) }}
-              </span>
-              <span class="text-sm text-gray-500">{{ log.createdAt }}</span>
+        <div class="overflow-x-auto pb-2">
+          <div class="flex gap-4 min-w-full">
+            <div v-for="(log, idx) in careLogs" :key="log.id" class="relative">
+              <div class="w-72 p-4 bg-gray-50 rounded-xl shadow-sm flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <span 
+                    class="px-2 py-1 rounded text-sm"
+                    :class="getLogTypeClass(log.logType)"
+                  >
+                    {{ getLogTypeName(log.logType) }}
+                  </span>
+                  <span class="text-xs text-gray-500">{{ formatDateTime(log.createdAt) }}</span>
+                </div>
+                <p class="text-gray-700 leading-relaxed">{{ log.content }}</p>
+                <div v-if="getLogImages(log).length" class="grid grid-cols-2 gap-2">
+                  <img
+                    v-for="(img, i) in getLogImages(log)"
+                    :key="i"
+                    :src="img"
+                    class="w-full h-24 object-cover rounded-lg border border-gray-200"
+                    alt="护理图片"
+                  />
+                </div>
+                <p class="text-xs text-gray-500">记录人: {{ log.staffName }}</p>
+              </div>
+              <div v-if="idx < careLogs.length - 1" class="absolute top-1/2 -right-2 h-px w-4 bg-gray-300"></div>
             </div>
-            <p class="text-gray-700">{{ log.content }}</p>
-            <p class="text-sm text-gray-500 mt-2">记录人: {{ log.staffName }}</p>
           </div>
         </div>
       </div>
@@ -144,10 +219,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import request from '@/utils/request'
 import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
+import { formatDateTime } from '@/utils/datetime'
 
 interface Pet {
   id: number
@@ -163,6 +239,7 @@ interface Order {
   pets?: Pet[]  // 宠物列表
   roomNo: string
   roomType: string
+  roomTypeDisplay?: string
   roomPrice: number
   checkInDate: string
   checkOutDate: string
@@ -180,15 +257,30 @@ interface CareLog {
   content: string
   staffName: string
   createdAt: string
+  images?: string | string[]
+}
+
+interface HotelReview {
+  orderId: number
+  hotelId: number
+  score: number
+  content?: string | null
+  createdAt: string
 }
 
 const route = useRoute()
-const router = useRouter()
 
 const order = ref<Order | null>(null)
 const careLogs = ref<CareLog[]>([])
 const loading = ref(true)
 const paying = ref(false)
+
+const review = ref<HotelReview | null>(null)
+const submittingReview = ref(false)
+const reviewForm = reactive({
+  score: 5,
+  content: ''
+})
 
 const getStatusName = (status: number) => {
   const map: Record<number, string> = {
@@ -262,6 +354,15 @@ const getLogTypeClass = (type: string) => {
   return map[type] || 'bg-gray-100 text-gray-800'
 }
 
+const getLogImages = (log: CareLog): string[] => {
+  if (!log || !log.images) return []
+  if (Array.isArray(log.images)) return log.images.filter(Boolean)
+  return log.images
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+}
+
 const getPetIcon = (type: number) => {
   const map: Record<number, string> = {
     1: '🐱',
@@ -286,10 +387,10 @@ const getPetInfo = (order: Order): Pet[] => {
   if (order.petIds) {
     try {
       const ids = typeof order.petIds === 'string' ? JSON.parse(order.petIds) : order.petIds
-      return ids.map((id: number) => ({ 
-        id, 
-        name: `ID: ${id}`, 
-        type: 0 
+      return ids.map((_, idx: number) => ({
+        id: idx,
+        name: `宠物${idx + 1}`,
+        type: 0
       }))
     } catch {
       return []
@@ -310,10 +411,43 @@ const fetchOrder = async () => {
       const logsRes = await request.get(`/care-log/order/${route.params.id}`)
       careLogs.value = logsRes.data || []
     }
+
+    // 如果订单已完成，尝试获取评价
+    if (res.data.status === 3) {
+      const reviewRes = await request.get(`/hotel-review/order/${route.params.id}`)
+      review.value = reviewRes.data || null
+    } else {
+      review.value = null
+    }
   } catch (error) {
     console.error('获取订单详情失败:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const submitReview = async () => {
+  if (!order.value) return
+  if (reviewForm.score < 1 || reviewForm.score > 5) {
+    showError('请先选择评分')
+    return
+  }
+
+  submittingReview.value = true
+  try {
+    await request.post('/hotel-review', {
+      orderId: order.value.id,
+      score: reviewForm.score,
+      content: reviewForm.content?.trim() || undefined
+    })
+    showSuccess('评价提交成功')
+    // 重新拉取评价
+    const reviewRes = await request.get(`/hotel-review/order/${order.value.id}`)
+    review.value = reviewRes.data || null
+  } catch (error: any) {
+    showError(error.message || '提交失败')
+  } finally {
+    submittingReview.value = false
   }
 }
 

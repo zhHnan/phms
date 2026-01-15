@@ -88,8 +88,19 @@
         <el-form-item label="酒店名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入酒店名称" />
         </el-form-item>
-        <el-form-item label="地址" prop="address">
-          <el-input v-model="formData.address" placeholder="请输入地址" />
+        <el-form-item label="地址" prop="addressCodes">
+          <el-cascader
+            v-model="formData.addressCodes"
+            :options="regionOptions"
+            :props="cascaderProps"
+            placeholder="请选择省/市/区"
+            clearable
+            filterable
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="详细地址" prop="addressDetail">
+          <el-input v-model="formData.addressDetail" placeholder="请输入门牌号/楼层等" />
         </el-form-item>
         <el-form-item label="联系电话" prop="phone">
           <el-input v-model="formData.phone" placeholder="请输入联系电话" />
@@ -160,11 +171,16 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import request from '@/utils/request'
+import { regionData, codeToText } from 'element-china-area-data'
 
 interface Hotel {
   id: number
   name: string
   address: string
+  provinceCode?: string
+  cityCode?: string
+  districtCode?: string
+  addressDetail?: string
   phone: string
   status: number
   images?: string
@@ -195,6 +211,8 @@ const formData = reactive({
   id: null as number | null,
   name: '',
   address: '',
+  addressCodes: [] as string[],
+  addressDetail: '',
   phone: '',
   status: 1,
   images: [] as string[]
@@ -204,8 +222,51 @@ const dialogTitle = computed(() => formData.id ? '编辑酒店' : '新增酒店'
 
 const formRules = {
   name: [{ required: true, message: '请输入酒店名称', trigger: 'blur' }],
-  address: [{ required: true, message: '请输入地址', trigger: 'blur' }],
+  addressCodes: [{ validator: (_: any, v: any, cb: any) => (v && v.length === 3 ? cb() : cb(new Error('请选择省/市/区'))), trigger: 'change' }],
+  addressDetail: [{ required: true, message: '请输入详细地址', trigger: 'blur' }],
   phone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }]
+}
+
+const regionOptions = regionData
+const cascaderProps = { emitPath: true } as const
+
+const buildAddressFromCodes = (codes: string[]) => {
+  if (!codes || codes.length === 0) return ''
+  return codes
+    .map((c) => (codeToText as any)[String(c)])
+    .filter(Boolean)
+    .join(' ')
+}
+
+// 兼容旧数据：尝试从 address(空格分隔)里解析回省/市/区
+const parseAddressToCodes = (address: string) => {
+  if (!address) return [] as string[]
+  const parts = address.split(/\s+/).filter(Boolean)
+  if (parts.length < 2) return [] as string[]
+
+  const provinceLabel = parts[0]
+  const cityLabel = parts[1]
+  const districtLabel = parts[2]
+
+  const province = (regionOptions as any[]).find((p) => p?.label === provinceLabel)
+  if (!province) return [] as string[]
+  const codes: string[] = [String(province.value)]
+
+  const city = (province.children as any[] | undefined)?.find((c) => c?.label === cityLabel)
+  if (!city) return codes
+  codes.push(String(city.value))
+
+  const district = districtLabel
+    ? (city.children as any[] | undefined)?.find((d) => d?.label === districtLabel)
+    : undefined
+  if (district?.value) codes.push(String(district.value))
+  return codes
+}
+
+const parseAddressToDetail = (address: string) => {
+  if (!address) return ''
+  const parts = address.split(/\s+/).filter(Boolean)
+  return parts.length >= 4 ? parts.slice(3).join(' ') : ''
 }
 
 // 解析图片JSON字符串
@@ -256,10 +317,16 @@ const handleAdd = () => {
 
 const handleEdit = (row: Hotel) => {
   const images = parseImages(row.images)
+  const addressCodes = row.provinceCode && row.cityCode && row.districtCode
+    ? [row.provinceCode, row.cityCode, row.districtCode]
+    : parseAddressToCodes(row.address)
+  const addressDetail = row.addressDetail ?? parseAddressToDetail(row.address)
   Object.assign(formData, {
     id: row.id,
     name: row.name,
     address: row.address,
+    addressCodes,
+    addressDetail,
     phone: row.phone,
     status: row.status,
     images: images
@@ -356,9 +423,23 @@ const handleSubmit = async () => {
     
     // 收集所有已上传的图片URL
     const imageUrls = imageFileList.value.map(file => file.response?.url || file.url).filter(Boolean)
-    
+
+    const provinceCode = formData.addressCodes?.[0] ? String(formData.addressCodes[0]) : undefined
+    const cityCode = formData.addressCodes?.[1] ? String(formData.addressCodes[1]) : undefined
+    const districtCode = formData.addressCodes?.[2] ? String(formData.addressCodes[2]) : undefined
+    const regionText = buildAddressFromCodes(formData.addressCodes)
+    const fullAddress = [regionText, formData.addressDetail].filter(Boolean).join(' ')
+
     const submitData = {
-      ...formData,
+      id: formData.id,
+      name: formData.name,
+      address: fullAddress,
+      provinceCode,
+      cityCode,
+      districtCode,
+      addressDetail: formData.addressDetail,
+      phone: formData.phone,
+      status: formData.status,
       images: JSON.stringify(imageUrls)
     }
     
@@ -383,6 +464,8 @@ const resetForm = () => {
   formData.id = null
   formData.name = ''
   formData.address = ''
+  formData.addressCodes = []
+  formData.addressDetail = ''
   formData.phone = ''
   formData.status = 1
   formData.images = []

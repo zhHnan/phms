@@ -25,6 +25,16 @@
             <option value="vip_suite">VIP套间</option>
           </select>
         </div>
+        <div class="w-48">
+          <label class="block text-sm font-medium text-gray-700 mb-1">排序方式</label>
+          <select v-model="filters.orderBy" class="input-field">
+            <option value="">默认排序</option>
+            <option value="roomScore">房间评分</option>
+            <option value="roomCount">房间评价数</option>
+            <option value="hotelScore">酒店评分</option>
+            <option value="hotelCount">酒店评价数</option>
+          </select>
+        </div>
         <div class="ml-auto">
           <button @click="handleSearch" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">
             筛选
@@ -73,6 +83,21 @@
         </div>
         <p class="text-gray-500 text-sm mb-2">房间号: {{ room.roomNo }}</p>
         <p v-if="room.hotelName" class="text-gray-500 text-sm mb-2">门店: {{ room.hotelName }}</p>
+
+        <div class="flex flex-col gap-1 text-sm text-gray-700 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="font-medium">房间评分:</span>
+            <span class="text-yellow-500">{{ renderStars(getRoomScore(room.id).roomAvg) }}</span>
+            <span class="text-gray-500">{{ getRoomScore(room.id).roomAvg.toFixed(1) }}/5</span>
+            <span class="text-gray-400 text-xs">({{ getRoomScore(room.id).roomCount }} 人)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-medium">酒店评分:</span>
+            <span class="text-yellow-500">{{ renderStars(getRoomScore(room.id).hotelAvg) }}</span>
+            <span class="text-gray-500">{{ getRoomScore(room.id).hotelAvg.toFixed(1) }}/5</span>
+            <span class="text-gray-400 text-xs">({{ getRoomScore(room.id).hotelCount }} 人)</span>
+          </div>
+        </div>
         
         <!-- 设施标签 -->
         <div v-if="getRoomFeatures(room.features).length > 0" class="flex flex-wrap gap-1 mb-2">
@@ -132,6 +157,7 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAvailableRooms, getHotelList, type Room, type Hotel } from '@/api'
+import request from '@/utils/request'
 
 const route = useRoute()
 const rooms = ref<Room[]>([])
@@ -143,10 +169,13 @@ const pageSize = ref(12)
 const total = ref(0)
 const hasMore = ref(true)
 const showBackToTop = ref(false)
+const roomScoreMap = ref<Record<number, { roomAvg: number; roomCount: number; hotelAvg: number; hotelCount: number }>>({})
+const loadedHotelSummary = new Set<number>()
 
 const filters = reactive({
   hotelId: '',
-  roomType: ''
+  roomType: '',
+  orderBy: ''
 })
 
 // 滚动监听
@@ -230,11 +259,51 @@ const getRoomImages = (imagesJson: string | undefined) => {
   }
 }
 
+const renderStars = (score: number) => {
+  if (!score || score <= 0) return '☆☆☆☆☆'
+  const rounded = Math.min(5, Math.max(0, Math.round(score)))
+  return '★★★★★'.slice(0, rounded) + '☆☆☆☆☆'.slice(0, 5 - rounded)
+}
+
+const getRoomScore = (roomId: number) => roomScoreMap.value[roomId] || { roomAvg: 0, roomCount: 0, hotelAvg: 0, hotelCount: 0 }
+
+const loadReviewSummaries = async (roomList: Room[]) => {
+  const hotelIds = Array.from(new Set(roomList.map(r => r.hotelId).filter(Boolean)))
+  for (const hotelId of hotelIds) {
+    if (loadedHotelSummary.has(Number(hotelId))) {
+      continue
+    }
+    try {
+      const res = await request.get(`/hotel-review/summary/${hotelId}`)
+      const data = res.data || {}
+      const hotelAvg = Number(data.hotelAvgScore || 0)
+      const hotelCount = Number(data.hotelReviewCount || 0)
+      if (Array.isArray(data.rooms)) {
+        data.rooms.forEach((stat: any) => {
+          const roomId = Number(stat.roomId)
+          roomScoreMap.value[roomId] = {
+            roomAvg: Number(stat.avgScore || 0),
+            roomCount: Number(stat.reviewCount || 0),
+            hotelAvg,
+            hotelCount
+          }
+        })
+      }
+      loadedHotelSummary.add(Number(hotelId))
+    } catch (error) {
+      console.error('获取酒店评分汇总失败:', error)
+    }
+  }
+}
+
 const fetchRooms = async (reset = false) => {
   if (reset) {
     loading.value = true
     page.value = 1
     rooms.value = []
+    roomScoreMap.value = {}
+    loadedHotelSummary.clear()
+    hasMore.value = true
   } else {
     loadingMore.value = true
   }
@@ -253,6 +322,11 @@ const fetchRooms = async (reset = false) => {
       params.roomType = filters.roomType
     }
 
+    if (filters.orderBy) {
+      params.orderBy = filters.orderBy
+      params.orderDirection = 'desc'
+    }
+
     const res = await getAvailableRooms(params)
     
     if (reset) {
@@ -263,6 +337,7 @@ const fetchRooms = async (reset = false) => {
     
     total.value = res.data.total
     hasMore.value = rooms.value.length < total.value
+    await loadReviewSummaries(res.data.records)
   } catch (error) {
     console.error('获取房间失败:', error)
   } finally {

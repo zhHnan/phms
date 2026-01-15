@@ -5,6 +5,8 @@ import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.phms.common.constant.Constants;
@@ -27,6 +29,7 @@ import com.phms.service.RoomService;
 import com.phms.service.UserService;
 import com.phms.util.RabbitMQUtil;
 import com.phms.vo.OrderVO;
+import com.phms.vo.PetSimpleVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -73,13 +77,73 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public Page<OrderVO> pageListVO(Page<OrderVO> page, Long hotelId, Long userId, Integer status) {
-        return orderMapper.selectOrderVOPage(page, hotelId, userId, status);
+    public Page<OrderVO> pageListVO(Page<OrderVO> page,
+                                   Long hotelId,
+                                   String orderNo,
+                                   String petName,
+                                   Long userId,
+                                   Integer status) {
+        Page<OrderVO> voPage = orderMapper.selectOrderVOPage(page, hotelId, orderNo, petName, userId, status);
+        voPage.getRecords().forEach(this::fillPetsInfo);
+        return voPage;
     }
 
     @Override
     public OrderVO getOrderVOById(Long id) {
-        return orderMapper.selectOrderVOById(id);
+        OrderVO vo = orderMapper.selectOrderVOById(id);
+        fillPetsInfo(vo);
+        return vo;
+    }
+
+    /**
+     * 补充宠物列表及兼容字段
+     */
+    private void fillPetsInfo(OrderVO vo) {
+        if (vo == null) return;
+        if (vo.getPetIds() == null || vo.getPetIds().isEmpty()) {
+            vo.setPets(new ArrayList<>());
+            return;
+        }
+
+        try {
+            List<Long> petIdList = JSONUtil.toList(vo.getPetIds(), Long.class);
+            if (petIdList == null || petIdList.isEmpty()) {
+                vo.setPets(new ArrayList<>());
+                return;
+            }
+
+            List<Pet> pets = petService.listByIds(petIdList);
+            List<PetSimpleVO> simpleList = new ArrayList<>();
+            for (Pet pet : pets) {
+                PetSimpleVO p = new PetSimpleVO();
+                p.setId(pet.getId());
+                p.setName(pet.getName());
+                p.setType(pet.getType());
+                simpleList.add(p);
+            }
+            vo.setPets(simpleList);
+
+            // 兼容旧字段：如果 petName 为空，使用宠物名拼接
+            if ((vo.getPetName() == null || vo.getPetName().isEmpty()) && !simpleList.isEmpty()) {
+                String joined = simpleList.stream()
+                        .map(PetSimpleVO::getName)
+                        .reduce((a, b) -> a + "、" + b)
+                        .orElse("");
+                vo.setPetName(joined);
+            }
+
+            // 也回填 petNames 以避免前端缺字段
+            if ((vo.getPetNames() == null || vo.getPetNames().isEmpty()) && !simpleList.isEmpty()) {
+                String joined = simpleList.stream()
+                        .map(PetSimpleVO::getName)
+                        .reduce((a, b) -> a + "、" + b)
+                        .orElse("");
+                vo.setPetNames(joined);
+            }
+        } catch (Exception e) {
+            // 解析失败时保持原样，避免影响主流程
+            vo.setPets(new ArrayList<>());
+        }
     }
 
     @Override
@@ -126,7 +190,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             if (!allOwnedByUser) {
                 throw new BusinessException(ResultCode.PARAM_ERROR, "只能选择自己的宠物");
             }
-            
+
+            // 根据当前时间段检查入住宠物是否已在其他订单存在
+            LambdaQueryWrapper<Order> petConflictWrapper = new LambdaQueryWrapper<>();
+            petConflictWrapper.in(Order::getPetIds, petIds) // 包含相同宠物的订单
+                    .eq(Order::getIsDeleted, 0)
+                    .in(Order::getStatus,
+                            Constants.ORDER_STATUS_PAID,
+                            Constants.ORDER_STATUS_CHECKED_IN) // 只检查入住中、待入住的订单
+                    .and(wrapper -> wrapper
+                            .le(Order::getCheckInDate, dto.getCheckOutDate()) // 其他订单入住日期 <= 当前订单退房日期
+                            .ge(Order::getCheckOutDate, dto.getCheckInDate()));   // 其他订单退房日期 >= 当前订单入住日期
+
+            long count = orderMapper.selectCount(petConflictWrapper);
+            if (count > 0) {
+                throw new BusinessException(ResultCode.PARAM_ERROR, "所选宠物已在其他订单中入住，请确认宠物时间安排");
+            }
+
+
             // 判断是否为VIP套间（允许混搭）
             String roomTypeName = room.getTypeName().toLowerCase();
             boolean isVIPRoom = roomTypeName.contains("vip") || roomTypeName.contains("suite");
@@ -249,9 +330,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         if (order.getStatus() != Constants.ORDER_STATUS_PENDING && 
             order.getStatus() != Constants.ORDER_STATUS_PAID) {
+            if (order.getStatus() == Constants.ORDER_STATUS_CHECKED_IN) {
+                // 检查是否办理入住
+                throw new BusinessException(ResultCode.ORDER_STATUS_ERROR, "订单已入住，无法取消");
+            }
             throw new BusinessException(ResultCode.ORDER_STATUS_ERROR, "订单状态不正确，无法取消");
         }
-
         // 更新订单状态
         order.setStatus(Constants.ORDER_STATUS_CANCELLED);
         updateById(order);

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.phms.entity.CareLog;
 import com.phms.mapper.CareLogMapper;
 import com.phms.service.CareLogService;
+import com.phms.vo.CareLogVO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,10 +29,12 @@ public class CareLogServiceImpl extends ServiceImpl<CareLogMapper, CareLog> impl
     }
 
     @Override
-    public List<CareLog> listByOrderId(Long orderId) {
-        return lambdaQuery()
-                .eq(CareLog::getOrderId, orderId)
-                .orderByDesc(CareLog::getCreatedAt)
-                .list();
+    public Page<CareLogVO> pageListVO(Page<CareLogVO> page, Long hotelId, String orderNo, String petName, Integer careType) {
+        return baseMapper.selectCareLogVOPage(page, hotelId, orderNo, petName, careType);
+    }
+
+    @Override
+    public List<CareLogVO> listByOrderId(Long orderId) {
+        return baseMapper.selectCareLogVOByOrderId(orderId);
     }
 }

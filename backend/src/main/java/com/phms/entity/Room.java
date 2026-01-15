@@ -59,6 +59,22 @@ public class Room extends BaseEntity {
     @Schema(description = "房间图片URL列表（JSON格式）")
     private String images;
 
+    @Schema(description = "房间平均评分")
+    @TableField(exist = false)
+    private Double roomAvgScore;
+
+    @Schema(description = "房间评价数")
+    @TableField(exist = false)
+    private Integer roomReviewCount;
+
+    @Schema(description = "酒店平均评分")
+    @TableField(exist = false)
+    private Double hotelAvgScore;
+
+    @Schema(description = "酒店评价数")
+    @TableField(exist = false)
+    private Integer hotelReviewCount;
+
     /**
      * 获取房型显示名称
      */

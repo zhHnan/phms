@@ -111,7 +111,7 @@
           </div>
         </div>
         <div class="mt-8 pt-8 border-t border-gray-700 text-center text-sm">
-          <p>© 2024 宠物酒店管理系统 (PHMS). All rights reserved.</p>
+          <p>© 2026 宠物酒店管理系统 (PHMS). All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -122,6 +122,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { showSuccess } from '@/utils/message'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -129,6 +130,8 @@ const mobileMenuOpen = ref(false)
 
 const handleLogout = () => {
   userStore.logout()
+  // 提示退出登陆
+  showSuccess('已退出登录')
   router.push('/')
 }
 </script>

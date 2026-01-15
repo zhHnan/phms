@@ -25,6 +25,18 @@ public class Hotel extends BaseEntity {
     @Schema(description = "详细地址")
     private String address;
 
+    @Schema(description = "省编码")
+    private String provinceCode;
+
+    @Schema(description = "市编码")
+    private String cityCode;
+
+    @Schema(description = "区/县编码")
+    private String districtCode;
+
+    @Schema(description = "详细地址（门牌号/楼层等）")
+    private String addressDetail;
+
     @Schema(description = "店长姓名")
     private String managerName;
 
@@ -36,4 +48,12 @@ public class Hotel extends BaseEntity {
 
     @Schema(description = "酒店图片URL列表（JSON数组）")
     private String images;
+
+    @Schema(description = "酒店平均评分")
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private Double avgScore;
+
+    @Schema(description = "酒店评价数")
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private Integer reviewCount;
 }

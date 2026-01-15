@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.phms.entity.Hotel;
 
+import java.util.List;
+
 /**
  * 门店信息 Service
  *
@@ -28,4 +30,12 @@ public interface HotelService extends IService<Hotel> {
      * @return 门店信息
      */
     Hotel getByCode(String code);
+
+    /**
+     * 获取评分最高的酒店列表
+     *
+     * @param limit 查询数量
+     * @return 酒店列表
+     */
+    List<Hotel> getTopHotelsByScore(Integer limit);
 }

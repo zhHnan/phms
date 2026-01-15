@@ -54,9 +54,61 @@ public class RoomServiceImpl extends ServiceImpl<RoomMapper, Room> implements Ro
     }
 
     @Override
-    public Page<Room> pageAvailableRooms(Page<Room> page, Long hotelId, String roomType, LocalDate checkInDate, LocalDate checkOutDate) {
-        // 使用 Mapper 方法查询，包含酒店名称，并排除已预订的房间
-        return baseMapper.selectAvailableRoomsWithHotel(page, hotelId, roomType, checkInDate, checkOutDate);
+    public Page<Room> pageAvailableRooms(Page<Room> page, Long hotelId, String roomType, LocalDate checkInDate,
+            LocalDate checkOutDate, String orderBy, String orderDirection) {
+        // 查询所有符合条件的房间（包含评分数据）
+        List<Room> allRooms = baseMapper.selectAvailableRoomsWithHotel(hotelId, roomType);
+
+        // 根据orderBy参数排序
+        if (orderBy != null && !orderBy.isEmpty()) {
+            boolean desc = "desc".equalsIgnoreCase(orderDirection);
+            allRooms.sort((r1, r2) -> {
+                int result = 0;
+                switch (orderBy) {
+                    case "roomScore":
+                        result = compareDouble(r1.getRoomAvgScore(), r2.getRoomAvgScore());
+                        break;
+                    case "roomCount":
+                        result = compareInteger(r1.getRoomReviewCount(), r2.getRoomReviewCount());
+                        break;
+                    case "hotelScore":
+                        result = compareDouble(r1.getHotelAvgScore(), r2.getHotelAvgScore());
+                        break;
+                    case "hotelCount":
+                        result = compareInteger(r1.getHotelReviewCount(), r2.getHotelReviewCount());
+                        break;
+                    default:
+                        result = r1.getPricePerNight().compareTo(r2.getPricePerNight());
+                }
+                return desc ? -result : result;
+            });
+        } else {
+            // 默认按价格升序
+            allRooms.sort((r1, r2) -> r1.getPricePerNight().compareTo(r2.getPricePerNight()));
+        }
+
+        // 手动分页
+        int total = allRooms.size();
+        int start = (int) ((page.getCurrent() - 1) * page.getSize());
+        int end = Math.min(start + (int) page.getSize(), total);
+
+        List<Room> pageRecords = start < total ? allRooms.subList(start, end) : List.of();
+
+        Page<Room> result = new Page<>(page.getCurrent(), page.getSize(), total);
+        result.setRecords(pageRecords);
+        return result;
+    }
+
+    private int compareDouble(Double d1, Double d2) {
+        double v1 = d1 != null ? d1 : 0.0;
+        double v2 = d2 != null ? d2 : 0.0;
+        return Double.compare(v1, v2);
+    }
+
+    private int compareInteger(Integer i1, Integer i2) {
+        int v1 = i1 != null ? i1 : 0;
+        int v2 = i2 != null ? i2 : 0;
+        return Integer.compare(v1, v2);
     }
 
     @Override
@@ -69,11 +121,11 @@ public class RoomServiceImpl extends ServiceImpl<RoomMapper, Room> implements Ro
     @Override
     public boolean checkAvailability(Long roomId, LocalDate checkInDate, LocalDate checkOutDate) {
         // 检查房间是否存在且状态为空闲
-//        Room room = getById(roomId);
-//        if (room == null || room.getStatus() != Constants.ROOM_STATUS_FREE) {
-//            return false;
-//        }
-        
+        // Room room = getById(roomId);
+        // if (room == null || room.getStatus() != Constants.ROOM_STATUS_FREE) {
+        // return false;
+        // }
+
         // 检查指定时间段是否有订单冲突
         // 返回冲突订单数量，0表示无冲突（可预订）
         int conflictCount = baseMapper.countConflictOrders(roomId, checkInDate, checkOutDate);

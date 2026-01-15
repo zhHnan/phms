@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * 宠物档案表
@@ -38,4 +39,13 @@ public class Pet extends BaseEntity {
 
     @Schema(description = "宠物照片URL")
     private String photoUrl;
+
+    @Schema(description = "狂犬疫苗接种日期")
+    private LocalDate rabiesVaccineDate;
+
+    @Schema(description = "驱虫日期")
+    private LocalDate dewormingDate;
+
+    @Schema(description = "疫苗/驱虫备注")
+    private String vaccineNotes;
 }

@@ -59,7 +59,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="message" label="消息" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="createdAt" label="登录时间" width="180" />
+        <el-table-column prop="createdAt" label="登录时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
       </el-table>
 
       <el-pagination
@@ -107,6 +111,18 @@ const pagination = reactive({
   size: 10,
   total: 0
 })
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${y}-${m}-${d} ${hh}:${mm}:${ss}`
+}
 
 const fetchData = async () => {
   loading.value = true

@@ -16,6 +16,10 @@ CREATE TABLE `sys_hotels` (
   `name` varchar(100) NOT NULL COMMENT '门店名称',
   `code` varchar(50) DEFAULT NULL COMMENT '门店编码（唯一标识）',
   `address` varchar(255) NOT NULL COMMENT '详细地址',
+  `province_code` varchar(20) DEFAULT NULL COMMENT '省编码',
+  `city_code` varchar(20) DEFAULT NULL COMMENT '市编码',
+  `district_code` varchar(20) DEFAULT NULL COMMENT '区/县编码',
+  `address_detail` varchar(255) DEFAULT NULL COMMENT '详细地址（门牌号/楼层等）',
   `manager_name` varchar(50) DEFAULT NULL COMMENT '店长姓名',
   `phone` varchar(20) NOT NULL COMMENT '联系电话',
   `status` tinyint DEFAULT 1 COMMENT '1=营业 0=停业',
@@ -163,6 +167,9 @@ CREATE TABLE `biz_pets` (
   `weight` decimal(5,2) DEFAULT NULL COMMENT '宠物体重（kg）',
   `notes` varchar(500) DEFAULT NULL COMMENT '性格/健康备注',
   `photo_url` varchar(255) DEFAULT NULL COMMENT '宠物照片URL',
+  `rabies_vaccine_date` date DEFAULT NULL COMMENT '狂犬疫苗接种日期',
+  `deworming_date` date DEFAULT NULL COMMENT '驱虫日期',
+  `vaccine_notes` varchar(500) DEFAULT NULL COMMENT '疫苗/驱虫备注',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` tinyint DEFAULT 0 COMMENT '逻辑删除',
@@ -195,19 +202,42 @@ CREATE TABLE `biz_orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
 
 -- ----------------------------
+-- 9.1 酒店评价表 (biz_hotel_reviews)
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_hotel_reviews`;
+CREATE TABLE `biz_hotel_reviews` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `order_id` bigint UNSIGNED NOT NULL COMMENT '关联订单ID（唯一）',
+  `hotel_id` bigint UNSIGNED NOT NULL COMMENT '酒店ID',
+  `user_id` bigint UNSIGNED NOT NULL COMMENT '用户ID',
+  `score` tinyint NOT NULL COMMENT '满意度评分：1-5',
+  `content` varchar(500) DEFAULT NULL COMMENT '评价内容',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` tinyint DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_id` (`order_id`),
+  INDEX `idx_hotel_id` (`hotel_id`),
+  INDEX `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='酒店评价表';
+
+-- ----------------------------
 -- 10. 宠物护理日志表 (biz_care_logs)
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_care_logs`;
 CREATE TABLE `biz_care_logs` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
   `order_id` bigint UNSIGNED NOT NULL COMMENT '关联订单ID',
+  `hotel_id` bigint UNSIGNED NOT NULL COMMENT '关联门店ID',
   `staff_id` bigint UNSIGNED NOT NULL COMMENT '操作员工ID',
-  `care_type` tinyint NOT NULL COMMENT '1=喂食 2=遛弯 3=清洁 4=体检',
+  `care_type` tinyint NOT NULL COMMENT '1=喂食 2=遛弯 3=清洁 4=体检 5=其他',
   `content` varchar(500) DEFAULT NULL COMMENT '护理详情（如：喂食皇家狗粮100g）',
+  `images` text DEFAULT NULL COMMENT '图片URL列表（逗号分隔）',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_deleted` tinyint DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (`id`),
-  INDEX `idx_order_id` (`order_id`)
+  INDEX `idx_order_id` (`order_id`),
+  INDEX `idx_hotel_id` (`hotel_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='宠物护理日志表';
 
 -- ----------------------------
@@ -335,10 +365,13 @@ INSERT INTO `sys_users` (`phone`, `password`, `nickname`, `avatar`, `balance`, `
 ('13900139002', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '爱猫人士小红', NULL, 300.00, 1);
 
 -- 插入示例宠物
-INSERT INTO `biz_pets` (`user_id`, `name`, `type`, `weight`, `notes`, `photo_url`) VALUES
-(1, '旺财', 2, 12.50, '性格活泼，喜欢玩球', NULL),
-(1, '小花', 1, 4.20, '性格温顺，有点怕生', NULL),
-(2, '咪咪', 1, 3.80, '英短蓝猫，需要每天梳毛', NULL);
+INSERT INTO `biz_pets` (
+  `user_id`, `name`, `type`, `weight`, `notes`, `photo_url`,
+  `rabies_vaccine_date`, `deworming_date`, `vaccine_notes`
+) VALUES
+(1, '旺财', 2, 12.50, '性格活泼，喜欢玩球', NULL, '2025-10-01', '2025-12-15', '每3个月驱虫一次'),
+(1, '小花', 1, 4.20, '性格温顺，有点怕生', NULL, NULL, '2025-11-20', '胆小，操作时注意安抚'),
+(2, '咪咪', 1, 3.80, '英短蓝猫，需要每天梳毛', NULL, '2025-09-10', NULL, '过敏史：对某些猫粮不耐受');
 
 -- 插入权限数据
 INSERT INTO `sys_permissions` (`perm_code`, `perm_name`, `module`, `sort_order`) VALUES

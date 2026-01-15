@@ -46,6 +46,13 @@ public class HotelController {
         return Result.success(hotelService.list());
     }
 
+    @Operation(summary = "查询顶级门店列表(按评分排序)")
+    @GetMapping("/top")
+    public Result<List<Hotel>> topHotels(
+            @Parameter(description = "查询数量") @RequestParam(defaultValue = "5") Integer limit) {
+        return Result.success(hotelService.getTopHotelsByScore(limit));
+    }
+
     @Operation(summary = "根据ID查询门店详情")
     @GetMapping("/{id}")
     public Result<Hotel> getById(@PathVariable Long id) {

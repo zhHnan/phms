@@ -3,7 +3,9 @@ package com.phms.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.phms.common.annotation.OperateLog;
+import com.phms.common.exception.BusinessException;
 import com.phms.common.result.Result;
+import com.phms.common.result.ResultCode;
 import com.phms.entity.Pet;
 import com.phms.service.PetService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,7 +53,9 @@ public class PetController {
     @Operation(summary = "根据ID查询宠物详情")
     @GetMapping("/{id}")
     public Result<Pet> getById(@PathVariable Long id) {
-        return Result.success(petService.getById(id));
+        Pet pet = petService.getById(id);
+        assertPetOwner(pet);
+        return Result.success(pet);
     }
 
     @Operation(summary = "新增宠物")
@@ -68,6 +72,14 @@ public class PetController {
     @PutMapping
     @OperateLog(module = "pet", type = "update", description = "修改宠物")
     public Result<Void> update(@Valid @RequestBody Pet pet) {
+        if (pet != null && pet.getId() != null) {
+            Pet dbPet = petService.getById(pet.getId());
+            assertPetOwner(dbPet);
+            // 防止篡改 owner
+            if (dbPet != null) {
+                pet.setUserId(dbPet.getUserId());
+            }
+        }
         petService.updateById(pet);
         return Result.success();
     }
@@ -76,7 +88,19 @@ public class PetController {
     @DeleteMapping("/{id}")
     @OperateLog(module = "pet", type = "delete", description = "删除宠物")
     public Result<Void> delete(@PathVariable Long id) {
+        Pet pet = petService.getById(id);
+        assertPetOwner(pet);
         petService.removeById(id);
         return Result.success();
+    }
+
+    private void assertPetOwner(Pet pet) {
+        if (pet == null) {
+            return;
+        }
+        Long userId = StpUtil.getLoginIdAsLong();
+        if (pet.getUserId() == null || !pet.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN);
+        }
     }
 }

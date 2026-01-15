@@ -33,7 +33,12 @@ public interface OrderService extends IService<Order> {
      * @param status  状态
      * @return 分页结果
      */
-    Page<OrderVO> pageListVO(Page<OrderVO> page, Long hotelId, Long userId, Integer status);
+    Page<OrderVO> pageListVO(Page<OrderVO> page,
+                             Long hotelId,
+                             String orderNo,
+                             String petName,
+                             Long userId,
+                             Integer status);
 
     /**
      * 根据ID查询订单详情（带酒店和房间信息）

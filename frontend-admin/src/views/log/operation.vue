@@ -68,7 +68,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="操作时间" width="180" />
+        <el-table-column prop="createdAt" label="操作时间" width="180">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="80" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleDetail(row)">详情</el-button>
@@ -92,7 +94,7 @@
     <el-dialog v-model="detailVisible" title="操作日志详情" width="700px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="操作人">{{ detailData.operatorName }}</el-descriptions-item>
-        <el-descriptions-item label="操作时间">{{ detailData.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="操作时间">{{ formatDateTime(detailData.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="模块">{{ getModuleName(detailData.operationModule) }}</el-descriptions-item>
         <el-descriptions-item label="操作类型">{{ getOperationTypeName(detailData.operationType) }}</el-descriptions-item>
         <el-descriptions-item label="IP地址">{{ detailData.operationIp }}</el-descriptions-item>
@@ -176,6 +178,18 @@ const pagination = reactive({
   size: 10,
   total: 0
 })
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${y}-${m}-${d} ${hh}:${mm}:${ss}`
+}
 
 const formatJson = (str: string) => {
   if (!str) return ''

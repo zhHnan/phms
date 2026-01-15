@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.phms.common.annotation.OperateLog;
+import com.phms.common.constant.Constants;
 import com.phms.common.result.Result;
 import com.phms.dto.OrderCreateDTO;
 import com.phms.entity.Order;
@@ -33,13 +34,30 @@ public class OrderController {
     @GetMapping("/page")
     @SaCheckPermission("order:list")
     public Result<Page<OrderVO>> page(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
+            @Parameter(description = "页码(兼容pageNum/page)") @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer page,
+            @Parameter(description = "每页数量(兼容pageSize/size)") @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) Integer size,
             @Parameter(description = "门店ID") @RequestParam(required = false) Long hotelId,
+            @Parameter(description = "订单号/房间号（模糊）") @RequestParam(required = false) String orderNo,
+            @Parameter(description = "宠物名称（模糊）") @RequestParam(required = false) String petName,
             @Parameter(description = "用户ID") @RequestParam(required = false) Long userId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
-        Page<OrderVO> page = new Page<>(pageNum, pageSize);
-        return Result.success(orderService.pageListVO(page, hotelId, userId, status));
+        int current = page != null ? page : (pageNum != null ? pageNum : 1);
+        int pageSizeFinal = size != null ? size : (pageSize != null ? pageSize : 10);
+
+        // 非超管只能查看自己门店
+        Object roleTypeObj = StpUtil.getSession().get("roleType");
+        Integer roleType = roleTypeObj == null ? null : Integer.valueOf(String.valueOf(roleTypeObj));
+        if (roleType == null || !roleType.equals(Constants.ROLE_ADMIN)) {
+            Object hotelIdObj = StpUtil.getSession().get("hotelId");
+            if (hotelIdObj != null) {
+                hotelId = Long.valueOf(String.valueOf(hotelIdObj));
+            }
+        }
+
+        Page<OrderVO> pageObj = new Page<>(current, pageSizeFinal);
+        return Result.success(orderService.pageListVO(pageObj, hotelId, orderNo, petName, userId, status));
     }
 
     @Operation(summary = "查询当前用户的订单列表（C端）")
@@ -50,7 +68,7 @@ public class OrderController {
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
         Long userId = StpUtil.getLoginIdAsLong();
         Page<OrderVO> page = new Page<>(pageNum, pageSize);
-        return Result.success(orderService.pageListVO(page, null, userId, status));
+        return Result.success(orderService.pageListVO(page, null, null, null, userId, status));
     }
 
     @Operation(summary = "根据ID查询订单详情")

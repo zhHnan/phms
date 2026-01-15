@@ -1,5 +1,7 @@
 E:\projects\phms\backend\src\main\java\com\phms\entity\Room.java
+E:\projects\phms\backend\src\main\java\com\phms\dto\UserProfileUpdateDTO.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\OrderServiceImpl.java
+E:\projects\phms\backend\src\main\java\com\phms\dto\HotelReviewCreateDTO.java
 E:\projects\phms\backend\src\main\java\com\phms\aspect\OperateLogAspect.java
 E:\projects\phms\backend\src\main\java\com\phms\service\AuthService.java
 E:\projects\phms\backend\src\main\java\com\phms\entity\MessageCenter.java
@@ -10,6 +12,7 @@ E:\projects\phms\backend\src\main\java\com\phms\controller\RoleController.java
 E:\projects\phms\backend\src\main\java\com\phms\common\annotation\OperateLog.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\LoginLogMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\entity\LoginLog.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\CareLogVO.java
 E:\projects\phms\backend\src\main\java\com\phms\service\RoomService.java
 E:\projects\phms\backend\src\main\java\com\phms\service\StaffService.java
 E:\projects\phms\backend\src\main\java\com\phms\dto\StaffLoginDTO.java
@@ -22,6 +25,7 @@ E:\projects\phms\backend\src\main\java\com\phms\entity\Pet.java
 E:\projects\phms\backend\src\main\java\com\phms\service\PermissionService.java
 E:\projects\phms\backend\src\main\java\com\phms\entity\Hotel.java
 E:\projects\phms\backend\src\main\java\com\phms\config\StpInterfaceImpl.java
+E:\projects\phms\backend\src\main\java\com\phms\controller\HotelReviewController.java
 E:\projects\phms\backend\src\main\java\com\phms\service\MessageCenterService.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\HotelController.java
 E:\projects\phms\backend\src\main\java\com\phms\dto\StaffDTO.java
@@ -34,8 +38,10 @@ E:\projects\phms\backend\src\main\java\com\phms\service\impl\CareLogServiceImpl.
 E:\projects\phms\backend\src\main\java\com\phms\common\result\ResultCode.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\VerificationCodeMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\vo\StaffLoginVO.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\LoginLogVO.java
 E:\projects\phms\backend\src\main\java\com\phms\common\enums\RoomTypeEnum.java
 E:\projects\phms\backend\src\main\java\com\phms\config\tenant\TenantHandler.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\HotelReviewVO.java
 E:\projects\phms\backend\src\main\java\com\phms\common\exception\GlobalExceptionHandler.java
 E:\projects\phms\backend\src\main\java\com\phms\common\exception\BusinessException.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\PermissionMapper.java
@@ -54,7 +60,9 @@ E:\projects\phms\backend\src\main\java\com\phms\entity\RolePermission.java
 E:\projects\phms\backend\src\main\java\com\phms\vo\StaffInfoVO.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\PetMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\UserMapper.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\MessageReadVO.java
 E:\projects\phms\backend\src\main\java\com\phms\service\OrderService.java
+E:\projects\phms\backend\src\main\java\com\phms\entity\HotelReview.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\DashboardController.java
 E:\projects\phms\backend\src\main\java\com\phms\dto\LoginDTO.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\OperationLogServiceImpl.java
@@ -67,6 +75,7 @@ E:\projects\phms\backend\src\main\java\com\phms\common\constant\Constants.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\TestController.java
 E:\projects\phms\backend\src\main\java\com\phms\service\HotelService.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\CareLogController.java
+E:\projects\phms\backend\src\main\java\com\phms\dto\CareLogSaveDTO.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\RoleMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\entity\CareLog.java
 E:\projects\phms\backend\src\main\java\com\phms\service\LoginLogService.java
@@ -74,18 +83,23 @@ E:\projects\phms\backend\src\main\java\com\phms\mapper\MessageCenterMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\PermissionServiceImpl.java
 E:\projects\phms\backend\src\main\java\com\phms\dto\OrderCreateDTO.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\RolePermissionMapper.java
+E:\projects\phms\backend\src\main\java\com\phms\service\impl\HotelReviewServiceImpl.java
 E:\projects\phms\backend\src\main\java\com\phms\util\RabbitMQUtil.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\HotelReviewSummaryVO.java
 E:\projects\phms\backend\src\main\java\com\phms\vo\OrderVO.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\PetSimpleVO.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\CareLogMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\service\CareLogService.java
 E:\projects\phms\backend\src\main\java\com\phms\entity\Order.java
 E:\projects\phms\backend\src\main\java\com\phms\scheduler\OrderCompletionScheduler.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\UserInfoVO.java
 E:\projects\phms\backend\src\main\java\com\phms\service\VerificationCodeService.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\RoomServiceImpl.java
 E:\projects\phms\backend\src\main\java\com\phms\mapper\StaffMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\PetServiceImpl.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\UploadController.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\AuthServiceImpl.java
+E:\projects\phms\backend\src\main\java\com\phms\vo\RoomReviewStatVO.java
 E:\projects\phms\backend\src\main\java\com\phms\dto\RolePermissionDTO.java
 E:\projects\phms\backend\src\main\java\com\phms\entity\VerificationCode.java
 E:\projects\phms\backend\src\main\java\com\phms\vo\DashboardVO.java
@@ -95,6 +109,8 @@ E:\projects\phms\backend\src\main\java\com\phms\entity\OperationLog.java
 E:\projects\phms\backend\src\main\java\com\phms\config\MinioConfig.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\AuthController.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\RoomController.java
+E:\projects\phms\backend\src\main\java\com\phms\mapper\HotelReviewMapper.java
 E:\projects\phms\backend\src\main\java\com\phms\controller\PermissionController.java
 E:\projects\phms\backend\src\main\java\com\phms\service\impl\StaffServiceImpl.java
+E:\projects\phms\backend\src\main\java\com\phms\service\HotelReviewService.java
 E:\projects\phms\backend\src\main\java\com\phms\service\PetService.java

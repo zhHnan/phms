@@ -27,7 +27,12 @@ export const useUserStore = defineStore('user', () => {
     const login = async (phone: string, code: string) => {
         const res = await request.post('/auth/user/login', { phone, code })
         setToken(res.data.token)
-        setUserInfo(res.data.userInfo)
+        setUserInfo({
+            id: res.data.userId,
+            nickname: res.data.nickname,
+            phone: res.data.phone,
+            avatar: res.data.avatar
+        })
         return res
     }
 

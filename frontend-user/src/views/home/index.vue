@@ -90,6 +90,11 @@
                   </div>
                 </div>
                 <h3 class="text-xl font-semibold mb-2">{{ hotel.name }}</h3>
+                <div class="flex items-center gap-2 text-sm text-gray-700 mb-3">
+                  <span class="text-yellow-500">{{ renderStars(getHotelScore(hotel.id).avg) }}</span>
+                  <span class="text-gray-600">{{ getHotelScore(hotel.id).avg.toFixed(1) }}/5</span>
+                  <span class="text-gray-400 text-xs">({{ getHotelScore(hotel.id).count }} 人评价)</span>
+                </div>
                 <div class="space-y-2 mb-4">
                   <p class="text-gray-600 text-sm flex items-center">
                     <span class="mr-2">📍</span>
@@ -166,11 +171,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getHotelList, type Hotel } from '@/api'
+import { getTopHotels, type Hotel } from '@/api'
+import request from '@/utils/request'
 
 const router = useRouter()
 const hotels = ref<Hotel[]>([])
 const loading = ref(false)
+const hotelScores = ref<Record<number, { avg: number; count: number }>>({})
 
 // 解析图片JSON字符串
 const parseImages = (images: string | undefined): string[] => {
@@ -182,13 +189,39 @@ const parseImages = (images: string | undefined): string[] => {
   }
 }
 
-// 获取酒店列表
+const renderStars = (score: number) => {
+  if (!score || score <= 0) return '☆☆☆☆☆'
+  const rounded = Math.min(5, Math.max(0, Math.round(score)))
+  return '★★★★★'.slice(0, rounded) + '☆☆☆☆☆'.slice(0, 5 - rounded)
+}
+
+const getHotelScore = (hotelId: number) => hotelScores.value[hotelId] || { avg: 0, count: 0 }
+
+const loadHotelSummaries = async (hotelIds: number[]) => {
+  const uniqueIds = Array.from(new Set(hotelIds)).filter(Boolean)
+  await Promise.all(uniqueIds.map(async (id) => {
+    // 避免重复请求同一家酒店
+    if (hotelScores.value[id]) return
+    try {
+      const res = await request.get(`/hotel-review/summary/${id}`)
+      const data = res.data || {}
+      hotelScores.value[id] = {
+        avg: Number(data.hotelAvgScore || 0),
+        count: Number(data.hotelReviewCount || 0)
+      }
+    } catch (error) {
+      console.error('获取酒店评分汇总失败:', error)
+    }
+  }))
+}
+
+// 获取顶级酒店列表（按评分排序，只显示5个）
 const fetchHotels = async () => {
   loading.value = true
   try {
-    const res = await getHotelList()
-    // 只显示营业中的酒店
-    hotels.value = res.data.filter(h => h.status === 1)
+    const res = await getTopHotels(5)
+    hotels.value = res.data
+    await loadHotelSummaries(hotels.value.map(h => h.id))
   } catch (error) {
     console.error('获取酒店列表失败:', error)
   } finally {

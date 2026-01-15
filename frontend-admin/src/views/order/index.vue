@@ -49,6 +49,15 @@
             ¥{{ row.totalAmount || row.totalPrice || 0 }}
           </template>
         </el-table-column>
+        <el-table-column prop="reviewScore" label="用户评分" width="120">
+          <template #default="{ row }">
+            <span v-if="row.reviewScore">
+              <span class="text-warning">{{ '★'.repeat(row.reviewScore) }}</span>
+
+            </span>
+            <span v-else class="text-gray-500">未评价</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusTagType(row.status)">
@@ -124,6 +133,20 @@
         <el-descriptions-item label="订单总价">¥{{ detailData.totalAmount || detailData.totalPrice || 0 }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '无' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailData.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="用户评分" :span="2">
+          <template #default>
+            <div v-if="detailData.reviewScore" class="flex items-center gap-3">
+              <span class="text-warning">{{ '★'.repeat(detailData.reviewScore) }}</span>
+              <!-- <span class="text-gray-500">/5</span> -->
+              <span v-if="detailData.reviewCreatedAt" style="margin-left: 20px;" class="text-gray-500">{{ formatDateTime(detailData.reviewCreatedAt) }}</span>
+            </div>
+            <span v-else class="text-gray-500">未评价</span>
+          </template>
+        </el-descriptions-item>
+        <el-descriptions-item label="用户评价" :span="2">
+          <span v-if="detailData.reviewContent">{{ detailData.reviewContent }}</span>
+          <span v-else class="text-gray-500">未填写</span>
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -153,6 +176,9 @@ interface Order {
   status: number
   remark: string
   createdAt: string
+  reviewScore?: number
+  reviewContent?: string
+  reviewCreatedAt?: string
 }
 
 const loading = ref(false)

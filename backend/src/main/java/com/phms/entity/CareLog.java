@@ -45,6 +45,9 @@ public class CareLog implements Serializable {
     @Schema(description = "护理详情")
     private String content;
 
+    @Schema(description = "图片URL列表（逗号分隔）")
+    private String images;
+
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;

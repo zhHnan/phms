@@ -40,6 +40,7 @@
       <el-table :data="tableData" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="orderNo" label="订单号" width="180" />
+        <el-table-column prop="roomNo" label="房间号" width="120" />
         <el-table-column prop="petName" label="宠物" width="120" />
         <el-table-column prop="logType" label="类型" width="100">
           <template #default="{ row }">
@@ -91,11 +92,12 @@
             remote
             :remote-method="searchOrders"
             :loading="orderLoading"
+            @visible-change="onOrderDropdownVisible"
           >
             <el-option 
               v-for="o in orderList" 
               :key="o.id" 
-              :label="`${o.orderNo} - ${o.petName}`" 
+              :label="`${o.orderNo}${o.roomNo ? ' - 房间:' + o.roomNo : ''}${o.petNames ? ' - 宠物:' + o.petNames : ''}`" 
               :value="o.id" 
             />
           </el-select>
@@ -117,13 +119,21 @@
             :rows="4" 
           />
         </el-form-item>
-        <el-form-item label="图片URL" prop="images">
-          <el-input 
-            v-model="formData.images" 
-            type="textarea" 
-            placeholder="多个图片URL用逗号分隔" 
-            :rows="2" 
-          />
+        <el-form-item label="图片">
+          <el-upload
+            v-model:file-list="imageFileList"
+            action="#"
+            :http-request="handleImageUpload"
+            :before-upload="beforeImageUpload"
+            list-type="picture-card"
+            :limit="10"
+            accept="image/*"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <div style="color: #999; font-size: 12px; margin-top: 8px;">
+            最多上传10张图片，支持jpg/png格式，单张不超过10MB
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -153,11 +163,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import request from '@/utils/request'
+import { useUserStore } from '@/stores/user'
 
 interface CareLog {
   id: number
   orderId: number
   orderNo: string
+  roomNo?: string
   petName: string
   logType: string
   content: string
@@ -170,7 +182,8 @@ interface CareLog {
 interface Order {
   id: number
   orderNo: string
-  petName: string
+  petNames?: string
+  roomNo?: string
 }
 
 const loading = ref(false)
@@ -182,6 +195,9 @@ const dialogVisible = ref(false)
 const imageVisible = ref(false)
 const imageList = ref<string[]>([])
 const formRef = ref<FormInstance>()
+const userStore = useUserStore()
+
+const imageFileList = ref<any[]>([])
 
 const searchForm = reactive({
   orderNo: '',
@@ -255,14 +271,23 @@ const fetchData = async () => {
 }
 
 const searchOrders = async (query: string) => {
-  if (!query) return
+  if (!query) {
+    // 非超管：无关键词时加载当前门店入住订单
+    if (!userStore.isAdmin) {
+      await loadCheckedInOrders()
+    }
+    return
+  }
   orderLoading.value = true
   try {
     const res = await request.get('/order/page', {
       params: {
+        page: 1,
+        size: 20,
         orderNo: query,
+        hotelId: userStore.isAdmin ? undefined : (userStore.hotelId ?? undefined),
         status: 2, // 只搜索已入住的订单
-        size: 20
+        petName: undefined
       }
     })
     orderList.value = res.data.records
@@ -271,6 +296,34 @@ const searchOrders = async (query: string) => {
   } finally {
     orderLoading.value = false
   }
+}
+
+const loadCheckedInOrders = async () => {
+  if (userStore.isAdmin) return
+  if (!userStore.hotelId) return
+  orderLoading.value = true
+  try {
+    const res = await request.get('/order/page', {
+      params: {
+        page: 1,
+        size: 50,
+        hotelId: userStore.hotelId,
+        status: 2
+      }
+    })
+    orderList.value = res.data.records
+  } catch (error) {
+    console.error('加载入住订单失败:', error)
+  } finally {
+    orderLoading.value = false
+  }
+}
+
+const onOrderDropdownVisible = async (visible: boolean) => {
+  if (!visible) return
+  if (userStore.isAdmin) return
+  if (orderList.value.length > 0) return
+  await loadCheckedInOrders()
 }
 
 const handleSearch = () => {
@@ -287,6 +340,10 @@ const handleReset = () => {
 
 const handleAdd = () => {
   resetForm()
+  // 店长/员工：打开弹窗前预加载当前门店入住订单
+  if (!userStore.isAdmin) {
+    loadCheckedInOrders()
+  }
   dialogVisible.value = true
 }
 
@@ -298,14 +355,62 @@ const handleEdit = (row: CareLog) => {
     content: row.content,
     images: row.images
   })
-  // 加载当前订单到选项中
-  orderList.value = [{ id: row.orderId, orderNo: row.orderNo, petName: row.petName }]
+  // 加载当前订单到选项中（展示用）
+  orderList.value = [{ id: row.orderId, orderNo: row.orderNo, roomNo: row.roomNo, petNames: row.petName }]
+
+  const urls = (row.images || '').split(',').map(s => s.trim()).filter(Boolean)
+  imageFileList.value = urls.map((url: string, index: number) => ({
+    name: `image-${index}`,
+    url,
+    uid: Date.now() + index
+  }))
   dialogVisible.value = true
 }
 
 const handleViewImages = (row: CareLog) => {
-  imageList.value = row.images.split(',').filter(Boolean)
+  imageList.value = (row.images || '').split(',').map(s => s.trim()).filter(Boolean)
   imageVisible.value = true
+}
+
+// 图片上传前校验
+const beforeImageUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt10M = file.size / 1024 / 1024 < 10
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过10MB')
+    return false
+  }
+  return true
+}
+
+// 自定义图片上传
+const handleImageUpload = async (options: any) => {
+  const { file, onSuccess, onError } = options
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await request.post('/upload/single', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    const responseData = { url: res.data.url, fileName: res.data.fileName }
+    onSuccess(responseData)
+
+    const uploadedFile = imageFileList.value.find((f) => f.uid === file.uid)
+    if (uploadedFile) {
+      uploadedFile.url = res.data.url
+      uploadedFile.response = responseData
+    }
+    ElMessage.success('图片上传成功')
+  } catch (error) {
+    onError(error)
+    ElMessage.error('图片上传失败')
+  }
 }
 
 const handleDelete = async (row: CareLog) => {
@@ -329,12 +434,23 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
     submitLoading.value = true
+
+    const imageUrls = imageFileList.value
+      .map((file) => file.response?.url || file.url)
+      .filter(Boolean)
+
+    const submitData = {
+      orderId: formData.orderId,
+      logType: formData.logType,
+      content: formData.content,
+      images: imageUrls.join(',')
+    }
     
     if (formData.id) {
-      await request.put(`/care-log/${formData.id}`, formData)
+      await request.put(`/care-log/${formData.id}`, submitData)
       ElMessage.success('更新成功')
     } else {
-      await request.post('/care-log', formData)
+      await request.post('/care-log', submitData)
       ElMessage.success('创建成功')
     }
     
@@ -354,6 +470,7 @@ const resetForm = () => {
   formData.content = ''
   formData.images = ''
   orderList.value = []
+  imageFileList.value = []
   formRef.value?.clearValidate()
 }
 

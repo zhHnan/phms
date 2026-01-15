@@ -10,7 +10,9 @@ import com.phms.common.exception.BusinessException;
 import com.phms.common.result.Result;
 import com.phms.common.result.ResultCode;
 import com.phms.dto.StaffDTO;
+import com.phms.entity.Hotel;
 import com.phms.entity.Staff;
+import com.phms.service.HotelService;
 import com.phms.service.StaffService;
 import com.phms.vo.StaffInfoVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +37,8 @@ public class StaffController {
 
     private final StaffService staffService;
 
+    private final HotelService hotelService;
+
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/page")
     @SaCheckPermission("staff:list")
@@ -46,9 +50,9 @@ public class StaffController {
             @Parameter(description = "角色类型") @RequestParam(required = false) Integer roleType,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
         
-        // 店长只能查看本门店员工
+        // 店长、员工只能查看本门店员工
         Object currentRoleType = StpUtil.getSession().get("roleType");
-        if (currentRoleType != null && (Integer) currentRoleType == Constants.ROLE_MANAGER) {
+        if (currentRoleType != null && (Integer) currentRoleType != Constants.ROLE_ADMIN) {
             hotelId = (Long) StpUtil.getSession().get("hotelId");
         }
         
@@ -94,6 +98,12 @@ public class StaffController {
             if (staffService.hasManager(dto.getHotelId(), null)) {
                 return Result.fail("该酒店已存在店长，每个酒店只能有一位店长");
             }
+            // 若 修改的是店长，则同步修改门店联系方式
+            Hotel hotel = hotelService.getById(dto.getHotelId());
+            if (hotel != null) {
+                hotel.setPhone(dto.getPhone());
+                hotelService.updateById(hotel);
+            }
         }
 
         Staff staff = new Staff();
@@ -134,8 +144,13 @@ public class StaffController {
             if (staffService.hasManager(checkHotelId, dto.getId())) {
                 return Result.fail("该酒店已存在店长，每个酒店只能有一位店长");
             }
+            // 若 修改的是店长，则同步修改门店联系方式
+            Hotel hotel = hotelService.getById(checkHotelId);
+            if (hotel != null) {
+                hotel.setPhone(dto.getPhone());
+                hotelService.updateById(hotel);
+            }
         }
-
         staff.setEmail(dto.getEmail());
         staff.setRealName(dto.getRealName());
         staff.setPhone(dto.getPhone());

@@ -24,7 +24,7 @@ public interface RoomService extends IService<Room> {
      * @return 分页结果
      */
     Page<Room> pageList(Page<Room> page, Long hotelId, String typeName, Integer status);
-    
+
     /**
      * 分页查询房间列表（带酒店名称）
      *
@@ -66,7 +66,8 @@ public interface RoomService extends IService<Room> {
      * @param checkOutDate 离店日期
      * @return 分页结果
      */
-    Page<Room> pageAvailableRooms(Page<Room> page, Long hotelId, String roomType, LocalDate checkInDate, LocalDate checkOutDate);
+    Page<Room> pageAvailableRooms(Page<Room> page, Long hotelId, String roomType, LocalDate checkInDate,
+            LocalDate checkOutDate, String orderBy, String orderDirection);
 
     /**
      * 根据门店ID统计各状态房间数量

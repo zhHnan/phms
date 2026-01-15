@@ -91,6 +91,21 @@
 
           <p class="text-gray-500 mb-4">房间号: {{ room.roomNo }}</p>
 
+          <div class="flex flex-col gap-2 mb-4">
+            <div class="flex items-center gap-2 text-sm text-gray-700">
+              <span class="font-medium">房间评分:</span>
+              <span class="text-yellow-500 text-base">{{ renderStars(roomAvgScore) }}</span>
+              <span class="text-gray-500">{{ roomAvgScore.toFixed(1) }}/5</span>
+              <span class="text-gray-400 text-xs">({{ roomReviewCount }} 人评价)</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-700">
+              <span class="font-medium">酒店评分:</span>
+              <span class="text-yellow-500 text-base">{{ renderStars(hotelAvgScore) }}</span>
+              <span class="text-gray-500">{{ hotelAvgScore.toFixed(1) }}/5</span>
+              <span class="text-gray-400 text-xs">({{ hotelReviewCount }} 人评价)</span>
+            </div>
+          </div>
+
           <div class="text-3xl font-bold text-primary-600 mb-6">
             ¥{{ room.pricePerNight }}
             <span class="text-lg text-gray-500">/天</span>
@@ -222,6 +237,11 @@ const router = useRouter()
 const room = ref<Room | null>(null)
 const loading = ref(true)
 const currentImageIndex = ref(0)
+
+const roomAvgScore = ref(0)
+const roomReviewCount = ref(0)
+const hotelAvgScore = ref(0)
+const hotelReviewCount = ref(0)
 
 // 日期相关
 const checkInDate = ref('')
@@ -363,6 +383,11 @@ const fetchRoom = async () => {
     room.value = roomRes.data
     console.log('房间数据:', room.value)
     console.log('图片列表:', getRoomImages(room.value?.images))
+
+    // 拉取酒店与房间评分
+    if (room.value?.hotelId) {
+      await fetchReviewSummary(room.value.hotelId, room.value.id)
+    }
     
     // 加载完房间后，检查默认日期的可用性
     await checkAvailability()
@@ -370,6 +395,37 @@ const fetchRoom = async () => {
     console.error('获取房间详情失败:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const renderStars = (score: number) => {
+  if (!score || score <= 0) return '☆☆☆☆☆'
+  const rounded = Math.min(5, Math.max(0, Math.round(score)))
+  return '★★★★★'.slice(0, rounded) + '☆☆☆☆☆'.slice(0, 5 - rounded)
+}
+
+const fetchReviewSummary = async (hotelId: number, roomId: number) => {
+  try {
+    const res = await request.get(`/hotel-review/summary/${hotelId}`)
+    const data = res.data || {}
+    hotelAvgScore.value = Number(data.hotelAvgScore || 0)
+    hotelReviewCount.value = Number(data.hotelReviewCount || 0)
+
+    if (Array.isArray(data.rooms)) {
+      const roomStat = data.rooms.find((r: any) => Number(r.roomId) === Number(roomId))
+      if (roomStat) {
+        roomAvgScore.value = Number(roomStat.avgScore || 0)
+        roomReviewCount.value = Number(roomStat.reviewCount || 0)
+      } else {
+        roomAvgScore.value = 0
+        roomReviewCount.value = 0
+      }
+    } else {
+      roomAvgScore.value = 0
+      roomReviewCount.value = 0
+    }
+  } catch (error) {
+    console.error('获取评分汇总失败:', error)
   }
 }
 

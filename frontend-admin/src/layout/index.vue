@@ -110,9 +110,9 @@ const isAdmin = computed(() => userStore.roleType === 9)
 // 左上角显示标题：超管显示"宠物酒店管理"，店长/员工显示酒店名
 const displayTitle = computed(() => {
   if (isAdmin.value) {
-    return '宠物酒店管理'
+    return '宠物酒店管理系统'
   }
-  return userStore.hotelName || '宠物酒店管理'
+  return userStore.hotelName || '宠物酒店管理系统'
 })
 
 const activeMenu = computed(() => {
