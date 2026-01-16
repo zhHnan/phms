@@ -34,11 +34,11 @@ public interface OrderService extends IService<Order> {
      * @return 分页结果
      */
     Page<OrderVO> pageListVO(Page<OrderVO> page,
-                             Long hotelId,
-                             String orderNo,
-                             String petName,
-                             Long userId,
-                             Integer status);
+            Long hotelId,
+            String orderNo,
+            String petName,
+            Long userId,
+            Integer status);
 
     /**
      * 根据ID查询订单详情（带酒店和房间信息）
@@ -81,12 +81,30 @@ public interface OrderService extends IService<Order> {
     boolean checkIn(Long orderId);
 
     /**
+     * 办理入住（带护理日志）
+     *
+     * @param orderId    订单ID
+     * @param careLogDTO 护理日志数据
+     * @return 是否成功
+     */
+    boolean checkInWithCareLog(Long orderId, com.phms.dto.CareLogSaveDTO careLogDTO);
+
+    /**
      * 办理退房
      *
      * @param orderId 订单ID
      * @return 是否成功
      */
     boolean checkOut(Long orderId);
+
+    /**
+     * 用户删除订单（逻辑删除）
+     *
+     * @param orderId 订单ID
+     * @param userId  用户ID
+     * @return 是否成功
+     */
+    boolean deleteOrderByUser(Long orderId, Long userId);
 
     /**
      * 根据订单号查询

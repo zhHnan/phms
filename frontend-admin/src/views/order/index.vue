@@ -149,12 +149,157 @@
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
+
+    <!-- 办理入住弹窗 -->
+    <el-dialog v-model="checkInVisible" title="办理入住" width="780px" @close="resetCheckInForm">
+      <el-steps :active="checkInStep" finish-status="success" align-center class="checkin-steps">
+        <el-step title="选择宠物" />
+        <el-step title="登记护理信息" />
+        <el-step title="完成" />
+      </el-steps>
+
+      <!-- 步骤1：选择宠物 -->
+      <div v-if="checkInStep === 0" class="mt-5">
+        <div class="step-header">
+          <div class="text-gray-600">该订单涉及的宠物信息：</div>
+          <el-tag type="info" v-if="selectedPets.length">已选 {{ selectedPets.length }} 只</el-tag>
+        </div>
+        <el-table
+          :data="petList"
+          stripe
+          border
+          max-height="400px"
+          @selection-change="handlePetSelectionChange"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column prop="name" label="宠物名称" width="120" />
+          <el-table-column label="宠物类型" width="100">
+            <template #default="{ row }">
+              {{ getPetTypeName(row.type) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="age" label="年龄" width="80" />
+          <el-table-column prop="weight" label="体重(kg)" width="100" />
+          <el-table-column label="健康备注" min-width="200">
+            <template #default="{ row }">
+              {{ row.notes || '无' }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 步骤2：登记护理信息 -->
+      <div v-if="checkInStep === 1" class="mt-5">
+        <el-form :model="careLogForm" label-width="120px">
+          <el-form-item label="已选宠物">
+            <div class="selected-pets">
+              <el-tag
+                v-for="pet in selectedPets"
+                :key="pet.id"
+                class="mr-2"
+              >
+                {{ pet.name }}（{{ getPetTypeName(pet.type) }}）
+              </el-tag>
+              <span v-if="selectedPets.length === 0" class="text-gray-400">未选择</span>
+            </div>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input 
+              v-model="careLogForm.content"
+              type="textarea" 
+              placeholder="可选：其他备注信息"
+              rows="2"
+            />
+          </el-form-item>
+          <el-form-item label="宠物照片">
+            <el-upload
+              v-model:file-list="imageFileList"
+              action="#"
+              list-type="picture-card"
+              :http-request="handleImageUpload"
+              :before-upload="beforeImageUpload"
+              :on-remove="handleImageRemove"
+              accept="image/*"
+            >
+              <el-icon><Plus /></el-icon>
+            </el-upload>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 步骤3：完成 -->
+      <div v-if="checkInStep === 2" class="mt-5">
+        <el-result icon="success" title="入住办理成功" sub-title="护理日志已记录">
+          <template #extra>
+            <el-card shadow="never" class="result-card">
+              <div class="result-row">
+                <span class="label">入住宠物</span>
+                <div class="value">
+                  <el-tag v-for="pet in selectedPets" :key="pet.id" class="mr-2">
+                    {{ pet.name }}（{{ getPetTypeName(pet.type) }}）
+                  </el-tag>
+                </div>
+              </div>
+              <div class="result-row">
+                <span class="label">护理类型</span>
+                <span class="value">入住登记</span>
+              </div>
+              <div class="result-row">
+                <span class="label">备注</span>
+                <span class="value">{{ careLogForm.content || '无' }}</span>
+              </div>
+              <div class="result-row" v-if="imageFileList.length">
+                <span class="label">宠物照片</span>
+                <div class="value image-preview">
+                  <el-image
+                    v-for="file in imageFileList"
+                    :key="file.uid || file.url"
+                    :src="file.url || file.response?.url"
+                    :preview-src-list="imagePreviewUrls"
+                    fit="cover"
+                    class="preview-item"
+                  />
+                </div>
+              </div>
+            </el-card>
+          </template>
+        </el-result>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="checkInVisible = false">关闭</el-button>
+          <el-button 
+            v-if="checkInStep > 0" 
+            @click="checkInStep--"
+          >
+            上一步
+          </el-button>
+          <el-button
+            v-if="checkInStep < 2"
+            type="primary"
+            :loading="checkInLoading"
+            @click="nextCheckInStep"
+          >
+            {{ checkInStep === 0 ? '下一步' : '确认入住' }}
+          </el-button>
+          <el-button 
+            v-if="checkInStep === 2"
+            type="success" 
+            @click="completeCheckIn"
+          >
+            完成
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 interface Order {
@@ -185,6 +330,23 @@ const loading = ref(false)
 const tableData = ref<Order[]>([])
 const detailVisible = ref(false)
 const detailData = ref<Order>({} as Order)
+const checkInVisible = ref(false)
+const checkInStep = ref(0)
+const checkInLoading = ref(false)
+const petList = ref<any[]>([])
+const selectedPets = ref<any[]>([])
+const currentOrderId = ref<number>(0)
+const imageFileList = ref<any[]>([])
+const imagePreviewUrls = ref<string[]>([])
+
+const careLogForm = reactive({
+  petIds: [] as number[],
+  petNames: '',
+  careType: 6,
+  content: '',
+  notes: '',
+  images: ''
+})
 
 const searchForm = reactive({
   orderNo: '',
@@ -231,6 +393,63 @@ const formatDateTime = (dateStr: string) => {
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
+// 图片上传相关方法
+const beforeImageUpload = (file: any) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt10M = file.size / 1024 / 1024 < 10
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过10MB')
+    return false
+  }
+  return true
+}
+
+const handleImageUpload = async (options: any) => {
+  const { file, onSuccess, onError } = options
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await request.post('/upload/single', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    const responseData = { url: res.data.url, fileName: res.data.fileName }
+    onSuccess(responseData)
+    
+    // 更新本地列表显示真实URL
+    const uploadedFile = imageFileList.value.find(f => f.uid === file.uid)
+    if (uploadedFile) {
+      uploadedFile.url = res.data.url
+    }
+    
+    updateCareLogImages()
+    ElMessage.success('图片上传成功')
+  } catch (error) {
+    onError(error)
+    ElMessage.error('图片上传失败')
+  }
+}
+
+const handleImageRemove = (_file: any, fileList: any[]) => {
+  imageFileList.value = fileList
+  updateCareLogImages()
+}
+
+const updateCareLogImages = () => {
+  careLogForm.images = imageFileList.value
+    .map(f => f.url || f.response?.url)
+    .filter(url => url)
+    .join(',')
+  imagePreviewUrls.value = imageFileList.value
+    .map(f => f.url || f.response?.url)
+    .filter(url => url)
+}
+
 const fetchData = async () => {
   loading.value = true
   try {
@@ -271,16 +490,26 @@ const handleDetail = (row: Order) => {
 
 const handleCheckIn = async (row: Order) => {
   try {
-    await ElMessageBox.confirm('确定要办理入住吗？', '提示', {
-      type: 'warning'
-    })
-    await request.post(`/order/${row.id}/check-in`)
-    ElMessage.success('已办理入住')
-    fetchData()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('办理入住失败:', error)
+    currentOrderId.value = row.id
+    // 获取宠物详情
+    const response = await request.get(`/order/${row.id}/pets`)
+    petList.value = response.data
+    if (!petList.value.length) {
+      ElMessage.error('该订单没有关联宠物')
+      return
     }
+    selectedPets.value = []
+    imageFileList.value = []
+    imagePreviewUrls.value = []
+    careLogForm.petIds = []
+    careLogForm.petNames = ''
+    careLogForm.images = ''
+    
+    checkInStep.value = 0
+    checkInVisible.value = true
+  } catch (error) {
+    console.error('获取宠物信息失败:', error)
+    ElMessage.error('获取宠物信息失败')
   }
 }
 
@@ -297,6 +526,73 @@ const handleCheckOut = async (row: Order) => {
       console.error('办理退房失败:', error)
     }
   }
+}
+
+const handlePetSelectionChange = (rows: any[]) => {
+  selectedPets.value = rows
+}
+
+const nextCheckInStep = async () => {
+  if (checkInStep.value === 0) {
+    if (!selectedPets.value.length) {
+      ElMessage.error('请先选择宠物')
+      return
+    }
+    careLogForm.petIds = selectedPets.value.map(pet => pet.id)
+    careLogForm.petNames = selectedPets.value.map(pet => pet.name).join('、')
+    checkInStep.value = 1
+  } else if (checkInStep.value === 1) {
+    // if (!careLogForm.careType) {
+    //   ElMessage.error('请选择护理类型')
+    //   return
+    // }
+    // if (!careLogForm.content.trim()) {
+    //   ElMessage.error('请输入护理详情')
+    //   return
+    // }
+    
+    // 保存护理日志并办理入住
+    try {
+      checkInLoading.value = true
+      await request.post(`/order/${currentOrderId.value}/check-in`, {
+        petIds: careLogForm.petIds,
+        petNames: careLogForm.petNames,
+        careType: careLogForm.careType,
+        content: careLogForm.content,
+        images: careLogForm.images
+      })
+      checkInStep.value = 2
+    } catch (error) {
+      console.error('办理入住失败:', error)
+      ElMessage.error('办理入住失败')
+    } finally {
+      checkInLoading.value = false
+    }
+  }
+}
+
+const completeCheckIn = () => {
+  checkInVisible.value = false
+  fetchData()
+  ElMessage.success('入住办理完成')
+}
+
+const resetCheckInForm = () => {
+  checkInStep.value = 0
+  careLogForm.petIds = []
+  careLogForm.petNames = ''
+  careLogForm.careType = 6
+  careLogForm.content = ''
+  careLogForm.images = ''
+  imageFileList.value = []
+  imagePreviewUrls.value = []
+  petList.value = []
+  selectedPets.value = []
+}
+
+const getPetTypeName = (type: number) => {
+  const typeMap = { 1: '猫咪', 2: '狗狗', 3: '异宠' }
+  return typeMap[type as keyof typeof typeMap] || '未知'
 }
 
 const handleCancel = async (row: Order) => {
@@ -341,6 +637,59 @@ onMounted(() => {
 .pagination {
   margin-top: 20px;
   justify-content: flex-end;
+}
+
+.checkin-steps {
+  margin-top: 8px;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.selected-pets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-card {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+}
+
+.result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.result-row .label {
+  width: 80px;
+  color: #64748b;
+}
+
+.result-row .value {
+  color: #1f2937;
+  flex: 1;
+}
+
+.image-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-item {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 </style>
 

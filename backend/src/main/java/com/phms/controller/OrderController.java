@@ -6,9 +6,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.phms.common.annotation.OperateLog;
 import com.phms.common.constant.Constants;
 import com.phms.common.result.Result;
+import com.phms.dto.CareLogSaveDTO;
 import com.phms.dto.OrderCreateDTO;
 import com.phms.entity.Order;
+import com.phms.entity.Pet;
 import com.phms.service.OrderService;
+import com.phms.service.PetService;
 import com.phms.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,6 +19,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 订单管理控制器
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderService orderService;
+    private final PetService petService;
 
     @Operation(summary = "分页查询订单列表（B端）")
     @GetMapping("/page")
@@ -100,6 +106,13 @@ public class OrderController {
         return Result.success();
     }
 
+    @Operation(summary = "扫码支付回调")
+    @GetMapping("/{id}/pay-scan")
+    public Result<Void> payScan(@PathVariable Long id) {
+        orderService.payOrder(id);
+        return Result.success();
+    }
+
     @Operation(summary = "取消订单")
     @PostMapping("/{id}/cancel")
     @OperateLog(module = "order", type = "update", description = "取消订单")
@@ -108,11 +121,44 @@ public class OrderController {
         return Result.success();
     }
 
-    @Operation(summary = "办理入住")
+    @Operation(summary = "用户删除订单（逻辑删除）")
+    @DeleteMapping("/{id}")
+    @OperateLog(module = "order", type = "delete", description = "用户删除订单")
+    public Result<Void> delete(@PathVariable Long id) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        orderService.deleteOrderByUser(id, userId);
+        return Result.success();
+    }
+
+    @Operation(summary = "查询订单关联的宠物列表")
+    @GetMapping("/{id}/pets")
+    @SaCheckPermission("order:checkin")
+    public Result<List<Pet>> getPetsByOrderId(@PathVariable Long id) {
+        List<Pet> pets = petService.getPetsByOrderId(id);
+        return Result.success(pets);
+    }
+
+    @Operation(summary = "办理入住（带护理日志）")
     @PostMapping("/{id}/check-in")
     @SaCheckPermission("order:checkin")
     @OperateLog(module = "order", type = "update", description = "办理入住")
-    public Result<Void> checkIn(@PathVariable Long id) {
+    public Result<Void> checkIn(@PathVariable Long id,
+            @Valid @RequestBody(required = false) CareLogSaveDTO careLogDTO) {
+        if (careLogDTO != null) {
+            // 带护理日志的入住
+            orderService.checkInWithCareLog(id, careLogDTO);
+        } else {
+            // 普通入住
+            orderService.checkIn(id);
+        }
+        return Result.success();
+    }
+
+    @Operation(summary = "办理入住（旧端点，不带护理日志）")
+    @PostMapping("/{id}/check-in-simple")
+    @SaCheckPermission("order:checkin")
+    @OperateLog(module = "order", type = "update", description = "办理入住")
+    public Result<Void> checkInSimple(@PathVariable Long id) {
         orderService.checkIn(id);
         return Result.success();
     }

@@ -37,18 +37,6 @@ public class CareLogController {
     private final CareLogService careLogService;
     private final OrderService orderService;
 
-    private Integer toCareType(String logType) {
-        if (logType == null || logType.isBlank()) return null;
-        return switch (logType) {
-            case "feeding" -> 1;
-            case "walking" -> 2;
-            case "cleaning" -> 3;
-            case "health_check" -> 4;
-            case "other" -> 5;
-            default -> null;
-        };
-    }
-
     private boolean isAdmin() {
         Object roleTypeObj = StpUtil.getSession().get("roleType");
         Integer roleType = roleTypeObj == null ? null : Integer.valueOf(String.valueOf(roleTypeObj));
@@ -56,7 +44,9 @@ public class CareLogController {
     }
 
     private Long currentHotelIdRequiredIfNotAdmin() {
-        if (isAdmin()) return null;
+        if (isAdmin()) {
+            return null;
+        }
         Object hotelIdObj = StpUtil.getSession().get("hotelId");
         if (hotelIdObj == null) {
             throw new BusinessException(ResultCode.NO_PERMISSION, "无门店权限");
@@ -74,9 +64,8 @@ public class CareLogController {
             @RequestParam(required = false) Integer size,
             @Parameter(description = "订单号") @RequestParam(required = false) String orderNo,
             @Parameter(description = "宠物名称") @RequestParam(required = false) String petName,
-            @Parameter(description = "日志类型") @RequestParam(required = false) String logType) {
+            @Parameter(description = "护理类型") @RequestParam(required = false) Integer careType) {
         Long hotelId = currentHotelIdRequiredIfNotAdmin();
-        Integer careType = toCareType(logType);
         int current = page != null ? page : (pageNum != null ? pageNum : 1);
         int pageSizeFinal = size != null ? size : (pageSize != null ? pageSize : 10);
         Page<CareLogVO> pageObj = new Page<>(current, pageSizeFinal);
@@ -105,12 +94,15 @@ public class CareLogController {
         if (hotelIdLimit != null && !hotelIdLimit.equals(order.getHotelId())) {
             throw new BusinessException(ResultCode.NO_PERMISSION, "无权限操作该门店订单");
         }
+        if (dto.getCareType() == null) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "护理类型不能为空");
+        }
 
         CareLog careLog = new CareLog();
         careLog.setOrderId(dto.getOrderId());
         careLog.setHotelId(order.getHotelId());
         careLog.setStaffId(StpUtil.getLoginIdAsLong());
-        careLog.setCareType(toCareType(dto.getLogType()));
+        careLog.setCareType(dto.getCareType());
         careLog.setContent(dto.getContent());
         careLog.setImages(dto.getImages());
 
@@ -139,7 +131,7 @@ public class CareLogController {
 
         CareLog careLog = new CareLog();
         careLog.setId(id);
-        careLog.setCareType(toCareType(dto.getLogType()));
+        careLog.setCareType(dto.getCareType());
         careLog.setContent(dto.getContent());
         careLog.setImages(dto.getImages());
         careLogService.updateById(careLog);

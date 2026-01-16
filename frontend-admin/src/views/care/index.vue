@@ -10,12 +10,13 @@
           <el-input v-model="searchForm.petName" placeholder="请输入宠物名称" clearable />
         </el-form-item>
         <el-form-item label="日志类型">
-          <el-select v-model="searchForm.logType" placeholder="全部类型" clearable>
-            <el-option label="喂食" value="feeding" />
-            <el-option label="清洁" value="cleaning" />
-            <el-option label="遛弯" value="walking" />
-            <el-option label="健康检查" value="health_check" />
-            <el-option label="其他" value="other" />
+          <el-select v-model="searchForm.careType" placeholder="全部类型" clearable>
+            <el-option label="喂食" :value="1" />
+            <el-option label="遛弯" :value="2" />
+            <el-option label="清洁" :value="3" />
+            <el-option label="体检" :value="4" />
+            <el-option label="其他" :value="5" />
+            <el-option label="入住登记" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -42,10 +43,10 @@
         <el-table-column prop="orderNo" label="订单号" width="180" />
         <el-table-column prop="roomNo" label="房间号" width="120" />
         <el-table-column prop="petName" label="宠物" width="120" />
-        <el-table-column prop="logType" label="类型" width="100">
+        <el-table-column prop="careType" label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="getLogTypeTagType(row.logType)">
-              {{ getLogTypeName(row.logType) }}
+            <el-tag :type="getcareTypeTagType(row.careType)">
+              {{ getcareTypeName(row.careType) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -102,13 +103,14 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="日志类型" prop="logType">
-          <el-select v-model="formData.logType" placeholder="请选择类型" style="width: 100%;">
-            <el-option label="喂食" value="feeding" />
-            <el-option label="清洁" value="cleaning" />
-            <el-option label="遛弯" value="walking" />
-            <el-option label="健康检查" value="health_check" />
-            <el-option label="其他" value="other" />
+        <el-form-item label="日志类型" prop="careType">
+          <el-select v-model="formData.careType" placeholder="请选择类型" style="width: 100%;">
+            <el-option label="喂食" :value="1" />
+            <el-option label="遛弯" :value="2" />
+            <el-option label="清洁" :value="3" />
+            <el-option label="体检" :value="4" />
+            <el-option label="其他" :value="5" />
+            <el-option label="入住登记" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item label="照料内容" prop="content">
@@ -171,7 +173,7 @@ interface CareLog {
   orderNo: string
   roomNo?: string
   petName: string
-  logType: string
+  careType: number
   content: string
   images: string
   staffId: number
@@ -202,7 +204,7 @@ const imageFileList = ref<any[]>([])
 const searchForm = reactive({
   orderNo: '',
   petName: '',
-  logType: ''
+  careType: null as number | null
 })
 
 const pagination = reactive({
@@ -214,7 +216,7 @@ const pagination = reactive({
 const formData = reactive({
   id: null as number | null,
   orderId: null as number | null,
-  logType: '',
+  careType: null as number | null,
   content: '',
   images: ''
 })
@@ -223,30 +225,36 @@ const dialogTitle = computed(() => formData.id ? '编辑照料记录' : '添加�
 
 const formRules = {
   orderId: [{ required: true, message: '请选择订单', trigger: 'change' }],
-  logType: [{ required: true, message: '请选择日志类型', trigger: 'change' }],
+  careType: [{ required: true, message: '请选择日志类型', trigger: 'change' }],
   content: [{ required: true, message: '请输入照料内容', trigger: 'blur' }]
 }
 
-const getLogTypeName = (type: string) => {
-  const map: Record<string, string> = {
-    feeding: '喂食',
-    cleaning: '清洁',
-    walking: '遛弯',
-    health_check: '健康检查',
-    other: '其他'
-  }
-  return map[type] || type
+// 护理类型名称映射（数值）
+const CARE_TYPE_NAME_MAP: Record<number, string> = {
+  1: '喂食',
+  2: '遛弯',
+  3: '清洁',
+  4: '体检',
+  5: '其他',
+  6: '入住登记'
 }
 
-const getLogTypeTagType = (type: string) => {
-  const map: Record<string, string> = {
-    feeding: 'success',
-    cleaning: 'primary',
-    walking: 'warning',
-    health_check: 'danger',
-    other: 'info'
-  }
-  return map[type] || ''
+// 护理类型标签类型映射（数值）
+const CARE_TYPE_TAG_MAP: Record<number, string> = {
+  1: 'success',
+  2: 'warning',
+  3: 'primary',
+  4: 'danger',
+  5: 'info',
+  6: 'info'
+}
+
+const getcareTypeName = (type: number) => {
+  return CARE_TYPE_NAME_MAP[type] || String(type ?? '')
+}
+
+const getcareTypeTagType = (type: number) => {
+  return CARE_TYPE_TAG_MAP[type] || ''
 }
 
 const fetchData = async () => {
@@ -258,7 +266,7 @@ const fetchData = async () => {
         size: pagination.size,
         orderNo: searchForm.orderNo || undefined,
         petName: searchForm.petName || undefined,
-        logType: searchForm.logType || undefined
+        careType: searchForm.careType ?? undefined
       }
     })
     tableData.value = res.data.records
@@ -334,7 +342,7 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.orderNo = ''
   searchForm.petName = ''
-  searchForm.logType = ''
+  searchForm.careType = null
   handleSearch()
 }
 
@@ -351,7 +359,7 @@ const handleEdit = (row: CareLog) => {
   Object.assign(formData, {
     id: row.id,
     orderId: row.orderId,
-    logType: row.logType,
+    careType: row.careType,
     content: row.content,
     images: row.images
   })
@@ -441,7 +449,7 @@ const handleSubmit = async () => {
 
     const submitData = {
       orderId: formData.orderId,
-      logType: formData.logType,
+      careType: formData.careType,
       content: formData.content,
       images: imageUrls.join(',')
     }
@@ -466,7 +474,7 @@ const handleSubmit = async () => {
 const resetForm = () => {
   formData.id = null
   formData.orderId = null
-  formData.logType = ''
+  formData.careType = null
   formData.content = ''
   formData.images = ''
   orderList.value = []

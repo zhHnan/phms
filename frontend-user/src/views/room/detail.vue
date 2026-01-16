@@ -114,28 +114,17 @@
           <!-- 日期选择 -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg">
             <h3 class="font-semibold mb-3">选择入住日期</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">入住日期</label>
-                <input 
-                  type="date" 
-                  v-model="checkInDate" 
-                  :min="minDate"
-                  @change="handleCheckInDateChange"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">退房日期</label>
-                <input 
-                  type="date" 
-                  v-model="checkOutDate" 
-                  :min="minCheckOutDate"
-                  @change="checkAvailability"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-            </div>
+            <el-date-picker
+              v-model="dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="入住日期"
+              end-placeholder="退房日期"
+              value-format="YYYY-MM-DD"
+              :disabled-date="disablePastDates"
+              @change="handleDateRangeChange"
+              class="w-full"
+            />
             <!-- 可用性提示 -->
             <div v-if="availabilityChecked" class="mt-3 flex items-center gap-2">
               <span 
@@ -244,10 +233,10 @@ const hotelAvgScore = ref(0)
 const hotelReviewCount = ref(0)
 
 // 日期相关
+const dateRange = ref<string[]>([])
 const checkInDate = ref('')
 const checkOutDate = ref('')
 const minDate = ref('')
-const minCheckOutDate = ref('')
 const isAvailable = ref(false)
 const availabilityChecked = ref(false)
 
@@ -269,26 +258,31 @@ const initDefaultDates = () => {
   minDate.value = formatLocalDate(today)
   checkInDate.value = formatLocalDate(defaultCheckIn)
   checkOutDate.value = formatLocalDate(defaultCheckOut)
-  minCheckOutDate.value = formatLocalDate(defaultCheckOut)
+  dateRange.value = [checkInDate.value, checkOutDate.value]
 }
 
-// 入住日期变化时自动调整退房日期
-const handleCheckInDateChange = () => {
-  if (checkInDate.value) {
-    // 计算最小退房日期（入住日期+1天）
-    const checkIn = new Date(checkInDate.value)
-    const minCheckOut = new Date(checkIn)
-    minCheckOut.setDate(checkIn.getDate() + 1)
-    minCheckOutDate.value = formatLocalDate(minCheckOut)
-    
-    // 自动设置退房日期为入住日期+3天
-    const defaultCheckOut = new Date(checkIn)
-    defaultCheckOut.setDate(checkIn.getDate() + 3)
-    checkOutDate.value = formatLocalDate(defaultCheckOut)
-    
-    // 检查可用性
-    checkAvailability()
+const disablePastDates = (date: Date) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date < today
+}
+
+// 日期区间变化时同步入住/退房
+const handleDateRangeChange = (range: string[]) => {
+  if (!range || range.length !== 2) {
+    availabilityChecked.value = false
+    return
   }
+  let [start, end] = range
+  if (start === end) {
+    const nextDay = new Date(start)
+    nextDay.setDate(nextDay.getDate() + 1)
+    end = formatLocalDate(nextDay)
+    dateRange.value = [start, end]
+  }
+  checkInDate.value = start
+  checkOutDate.value = end
+  checkAvailability()
 }
 
 // 检查房间可用性

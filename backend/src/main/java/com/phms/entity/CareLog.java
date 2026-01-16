@@ -39,7 +39,7 @@ public class CareLog implements Serializable {
     @Schema(description = "操作员工ID")
     private Long staffId;
 
-    @Schema(description = "护理类型：1=喂食 2=遛弯 3=清洁 4=体检")
+    @Schema(description = "护理类型：1=喂食 2=遛弯 3=清洁 4=体检 5=其他 6=入住登记")
     private Integer careType;
 
     @Schema(description = "护理详情")

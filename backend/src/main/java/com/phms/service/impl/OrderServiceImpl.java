@@ -3,6 +3,7 @@ package com.phms.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -12,7 +13,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.phms.common.constant.Constants;
 import com.phms.common.exception.BusinessException;
 import com.phms.common.result.ResultCode;
+import com.phms.dto.CareLogSaveDTO;
 import com.phms.dto.OrderCreateDTO;
+import com.phms.entity.CareLog;
 import com.phms.entity.Order;
 import com.phms.entity.Hotel;
 import com.phms.entity.Pet;
@@ -20,6 +23,7 @@ import com.phms.entity.Room;
 import com.phms.mapper.OrderMapper;
 import com.phms.entity.Staff;
 import com.phms.entity.User;
+import com.phms.service.CareLogService;
 import com.phms.service.OrderService;
 import com.phms.service.HotelService;
 import com.phms.service.MessageCenterService;
@@ -41,6 +45,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -60,9 +65,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final StaffService staffService;
     private final UserService userService;
     private final MessageCenterService messageCenterService;
+    private final CareLogService careLogService;
     private final StringRedisTemplate redisTemplate;
     private final RabbitMQUtil rabbitMQUtil;
-    
+
     private static final String LOCK_PREFIX = "order:lock:room:";
     private static final long LOCK_TIMEOUT = 10; // 锁超时时间（秒）
 
@@ -78,11 +84,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     public Page<OrderVO> pageListVO(Page<OrderVO> page,
-                                   Long hotelId,
-                                   String orderNo,
-                                   String petName,
-                                   Long userId,
-                                   Integer status) {
+            Long hotelId,
+            String orderNo,
+            String petName,
+            Long userId,
+            Integer status) {
         Page<OrderVO> voPage = orderMapper.selectOrderVOPage(page, hotelId, orderNo, petName, userId, status);
         voPage.getRecords().forEach(this::fillPetsInfo);
         return voPage;
@@ -99,7 +105,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
      * 补充宠物列表及兼容字段
      */
     private void fillPetsInfo(OrderVO vo) {
-        if (vo == null) return;
+        if (vo == null)
+            return;
         if (vo.getPetIds() == null || vo.getPetIds().isEmpty()) {
             vo.setPets(new ArrayList<>());
             return;
@@ -152,17 +159,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 构建分布式锁的key：room_id + check_in + check_out
         String lockKey = LOCK_PREFIX + dto.getRoomId() + ":" + dto.getCheckInDate() + ":" + dto.getCheckOutDate();
         String lockValue = UUID.randomUUID().toString();
-        
+
         // 尝试获取锁
-        Boolean lockAcquired = redisTemplate.opsForValue().setIfAbsent(lockKey, lockValue, LOCK_TIMEOUT, TimeUnit.SECONDS);
+        Boolean lockAcquired = redisTemplate.opsForValue().setIfAbsent(lockKey, lockValue, LOCK_TIMEOUT,
+                TimeUnit.SECONDS);
         if (Boolean.FALSE.equals(lockAcquired)) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "订单处理中，请稍后重试");
         }
-        
+
         try {
             // 获取当前用户ID（lambda中使用，需final/有效final）
             final Long userId = StpUtil.getLoginIdAsLong();
-            
+
             // 检查房间是否存在
             Room room = roomService.getById(dto.getRoomId());
             if (room == null) {
@@ -175,8 +183,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 throw new BusinessException(ResultCode.PARAM_ERROR, "请至少选择一只宠物");
             }
             if (petIds.size() > room.getMaxPetNum()) {
-                throw new BusinessException(ResultCode.PARAM_ERROR, 
-                    String.format("该房间最多容纳 %d 只宠物，您选择了 %d 只", room.getMaxPetNum(), petIds.size()));
+                throw new BusinessException(ResultCode.PARAM_ERROR,
+                        String.format("该房间最多容纳 %d 只宠物，您选择了 %d 只", room.getMaxPetNum(), petIds.size()));
             }
 
             // 验证宠物类型是否与房间类型匹配
@@ -184,7 +192,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             if (pets.size() != petIds.size()) {
                 throw new BusinessException(ResultCode.PARAM_ERROR, "部分宠物不存在");
             }
-            
+
             // 检查所有宠物是否属于当前用户
             boolean allOwnedByUser = pets.stream().allMatch(pet -> pet.getUserId().equals(userId));
             if (!allOwnedByUser) {
@@ -200,18 +208,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                             Constants.ORDER_STATUS_CHECKED_IN) // 只检查入住中、待入住的订单
                     .and(wrapper -> wrapper
                             .le(Order::getCheckInDate, dto.getCheckOutDate()) // 其他订单入住日期 <= 当前订单退房日期
-                            .ge(Order::getCheckOutDate, dto.getCheckInDate()));   // 其他订单退房日期 >= 当前订单入住日期
+                            .ge(Order::getCheckOutDate, dto.getCheckInDate())); // 其他订单退房日期 >= 当前订单入住日期
 
             long count = orderMapper.selectCount(petConflictWrapper);
             if (count > 0) {
                 throw new BusinessException(ResultCode.PARAM_ERROR, "所选宠物已在其他订单中入住，请确认宠物时间安排");
             }
 
-
             // 判断是否为VIP套间（允许混搭）
             String roomTypeName = room.getTypeName().toLowerCase();
             boolean isVIPRoom = roomTypeName.contains("vip") || roomTypeName.contains("suite");
-            
+
             if (!isVIPRoom) {
                 // 非VIP房间需要检查宠物类型限制
                 // 1. 检查房间类型对应的允许宠物类型
@@ -229,17 +236,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                     boolean allPetsMatch = pets.stream().allMatch(pet -> pet.getType().equals(allowedPetType));
                     if (!allPetsMatch) {
                         String petTypeName = allowedPetType == 1 ? "猫咪" : "狗狗";
-                        throw new BusinessException(ResultCode.PARAM_ERROR, 
-                            String.format("该房间仅限%s入住，请选择相应类型的宠物", petTypeName));
+                        throw new BusinessException(ResultCode.PARAM_ERROR,
+                                String.format("该房间仅限%s入住，请选择相应类型的宠物", petTypeName));
                     }
                 }
-                
+
                 // 3. 验证多只宠物时类型是否一致
                 if (pets.size() > 1) {
                     long distinctTypes = pets.stream().map(Pet::getType).distinct().count();
                     if (distinctTypes > 1) {
-                        throw new BusinessException(ResultCode.PARAM_ERROR, 
-                            "该房间不允许不同类型的宠物一起居住，仅VIP套间支持混搭");
+                        throw new BusinessException(ResultCode.PARAM_ERROR,
+                                "该房间不允许不同类型的宠物一起居住，仅VIP套间支持混搭");
                     }
                 }
             }
@@ -250,13 +257,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             long conflictCount = lambdaQuery()
                     .eq(Order::getRoomId, dto.getRoomId())
                     .eq(Order::getIsDeleted, 0)
-                    .in(Order::getStatus, 
-                        Constants.ORDER_STATUS_PENDING,      // 0 待支付
-                        Constants.ORDER_STATUS_PAID,         // 1 待入住
-                        Constants.ORDER_STATUS_CHECKED_IN)   // 2 入住中
+                    .in(Order::getStatus,
+                            Constants.ORDER_STATUS_PENDING, // 0 待支付
+                            Constants.ORDER_STATUS_PAID, // 1 待入住
+                            Constants.ORDER_STATUS_CHECKED_IN) // 2 入住中
                     .and(wrapper -> wrapper
-                        .lt(Order::getCheckInDate, newCheckOutDate)  // 现有订单的入住日期 < 新订单的退房日期
-                        .gt(Order::getCheckOutDate, newCheckInDate)   // 现有订单的退房日期 > 新订单的入住日期
+                            .lt(Order::getCheckInDate, newCheckOutDate) // 现有订单的入住日期 < 新订单的退房日期
+                            .gt(Order::getCheckOutDate, newCheckInDate) // 现有订单的退房日期 > 新订单的入住日期
                     )
                     .count();
             if (conflictCount > 0) {
@@ -328,8 +335,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (order == null) {
             throw new BusinessException(ResultCode.ORDER_NOT_FOUND);
         }
-        if (order.getStatus() != Constants.ORDER_STATUS_PENDING && 
-            order.getStatus() != Constants.ORDER_STATUS_PAID) {
+        if (order.getStatus() != Constants.ORDER_STATUS_PENDING &&
+                order.getStatus() != Constants.ORDER_STATUS_PAID) {
             if (order.getStatus() == Constants.ORDER_STATUS_CHECKED_IN) {
                 // 检查是否办理入住
                 throw new BusinessException(ResultCode.ORDER_STATUS_ERROR, "订单已入住，无法取消");
@@ -360,10 +367,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 校验当前日期是否是入住日期
         LocalDate today = LocalDate.now();
         LocalDate checkInDate = order.getCheckInDate();
-        
+
         if (today.isBefore(checkInDate)) {
-            throw new BusinessException(ResultCode.PARAM_ERROR, 
-                String.format("入住日期为 %s，当前无法办理入住", checkInDate));
+            throw new BusinessException(ResultCode.PARAM_ERROR,
+                    String.format("入住日期为 %s，当前无法办理入住", checkInDate));
         }
 
         // 更新订单状态
@@ -378,6 +385,67 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
 
         return updated;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean checkInWithCareLog(Long orderId, CareLogSaveDTO careLogDTO) {
+        // 1. 同步更新订单宠物记录（以本次选择为准）
+        Order order = getById(orderId);
+        if (order == null) {
+            return false;
+        }
+
+        List<Long> petIds = new ArrayList<>();
+        if (careLogDTO.getPetIds() != null && !careLogDTO.getPetIds().isEmpty()) {
+            petIds.addAll(careLogDTO.getPetIds());
+        } else if (careLogDTO.getPetId() != null) {
+            petIds.add(careLogDTO.getPetId());
+        }
+
+        if (!petIds.isEmpty()) {
+            order.setPetIds(JSONUtil.toJsonStr(petIds));
+            updateById(order);
+        }
+
+        // 2. 办理入住
+        boolean checkInSuccess = checkIn(orderId);
+        if (!checkInSuccess) {
+            return false;
+        }
+
+        CareLog careLog = new CareLog();
+        careLog.setOrderId(orderId);
+        careLog.setHotelId(order.getHotelId());
+        careLog.setStaffId(StpUtil.getLoginIdAsLong());
+        Integer careType = careLogDTO.getCareType();
+        if (careType == null) {
+            careType = 6;
+        }
+        careLog.setCareType(careType);
+
+        // 组合内容：包含宠物信息和备注
+        StringBuilder contentBuilder = new StringBuilder();
+        if (!petIds.isEmpty()) {
+            List<Pet> pets = petService.listByIds(petIds);
+            String petNames = pets.stream()
+                    .map(Pet::getName)
+                    .filter(StrUtil::isNotBlank)
+                    .reduce((a, b) -> a + "、" + b)
+                    .orElse("");
+            contentBuilder.append("[宠物:").append(petNames).append("] ");
+        }
+
+        String content = StrUtil.blankToDefault(careLogDTO.getContent(), "入住登记");
+        contentBuilder.append(content);
+        if (StrUtil.isNotBlank(careLogDTO.getNotes())) {
+            contentBuilder.append(" [备注:").append(careLogDTO.getNotes()).append("]");
+        }
+        careLog.setContent(contentBuilder.toString());
+
+        careLog.setImages(careLogDTO.getImages());
+
+        return careLogService.save(careLog);
     }
 
     @Override
@@ -403,6 +471,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
 
         return updated;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteOrderByUser(Long orderId, Long userId) {
+        Order order = getById(orderId);
+        if (order == null) {
+            throw new BusinessException(ResultCode.ORDER_NOT_FOUND);
+        }
+        if (!order.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.NO_PERMISSION, "无权限删除该订单");
+        }
+        return removeById(orderId);
     }
 
     @Override
@@ -433,14 +514,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         LocalDate today = LocalDate.now();
         List<Order> orders = lambdaQuery()
                 .eq(hotelId != null, Order::getHotelId, hotelId)
-                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN, Constants.ORDER_STATUS_COMPLETED)
+                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN,
+                        Constants.ORDER_STATUS_COMPLETED)
                 .ge(Order::getPayTime, today.atStartOfDay())
                 .lt(Order::getPayTime, today.plusDays(1).atStartOfDay())
                 .list();
-        
+
         return orders.stream()
                 .map(Order::getTotalAmount)
-                .filter(amount -> amount != null)
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -449,14 +531,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         LocalDate today = LocalDate.now();
         LocalDate firstDayOfMonth = today.withDayOfMonth(1);
         LocalDate firstDayOfNextMonth = firstDayOfMonth.plusMonths(1);
-        
+
         List<Order> orders = lambdaQuery()
                 .eq(hotelId != null, Order::getHotelId, hotelId)
-                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN, Constants.ORDER_STATUS_COMPLETED)
+                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN,
+                        Constants.ORDER_STATUS_COMPLETED)
                 .ge(Order::getPayTime, firstDayOfMonth.atStartOfDay())
                 .lt(Order::getPayTime, firstDayOfNextMonth.atStartOfDay())
                 .list();
-        
+
         return orders.stream()
                 .map(Order::getTotalAmount)
                 .filter(amount -> amount != null)
@@ -467,10 +550,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public BigDecimal calculateTotalRevenue(Long hotelId) {
         List<Order> orders = lambdaQuery()
                 .eq(hotelId != null, Order::getHotelId, hotelId)
-                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN, Constants.ORDER_STATUS_COMPLETED)
+                .in(Order::getStatus, Constants.ORDER_STATUS_PAID, Constants.ORDER_STATUS_CHECKED_IN,
+                        Constants.ORDER_STATUS_COMPLETED)
                 .isNotNull(Order::getPayTime)
                 .list();
-        
+
         return orders.stream()
                 .map(Order::getTotalAmount)
                 .filter(amount -> amount != null)
@@ -488,8 +572,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         String content = String.format(
                 "用户%s已支付订单%s，酒店：%s，房间：%s，入住：%s，离店：%s，宠物数：%d。请提前做好接待准备。",
-                userName, order.getOrderNo(), hotelName, roomNo, order.getCheckInDate(), order.getCheckOutDate(), petCount
-        );
+                userName, order.getOrderNo(), hotelName, roomNo, order.getCheckInDate(), order.getCheckOutDate(),
+                petCount);
         notifyHotelStaff(order, "订单支付成功提醒", content);
     }
 
@@ -502,8 +586,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         String content = String.format(
                 "订单%s已办理入住，酒店：%s，房间：%s，入住：%s，预计离店：%s，宠物数：%d。请做好宠物护理提醒与记录。",
-                order.getOrderNo(), hotelName, roomNo, order.getCheckInDate(), order.getCheckOutDate(), petCount
-        );
+                order.getOrderNo(), hotelName, roomNo, order.getCheckInDate(), order.getCheckOutDate(), petCount);
         notifyHotelStaff(order, "客户已入住提醒", content);
     }
 
@@ -515,8 +598,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         String content = String.format(
                 "订单%s已退房，酒店：%s，房间：%s。请及时安排房间清洁与消杀，确保后续入住体验。",
-                order.getOrderNo(), hotelName, roomNo
-        );
+                order.getOrderNo(), hotelName, roomNo);
         notifyHotelStaff(order, "客户已退房提醒", content);
     }
 
@@ -557,7 +639,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
      * 生成订单号
      */
     private String generateOrderNo() {
-        return "PH" + LocalDateTimeUtil.format(LocalDateTime.now(), "yyyyMMddHHmmss") 
+        return "PH" + LocalDateTimeUtil.format(LocalDateTime.now(), "yyyyMMddHHmmss")
                 + IdUtil.fastSimpleUUID().substring(0, 6).toUpperCase();
     }
 }

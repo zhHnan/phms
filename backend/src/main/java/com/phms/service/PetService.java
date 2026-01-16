@@ -31,4 +31,12 @@ public interface PetService extends IService<Pet> {
      * @return 宠物列表
      */
     List<Pet> listByUserId(Long userId);
+
+    /**
+     * 根据订单ID查询关联的宠物列表
+     *
+     * @param orderId 订单ID
+     * @return 宠物列表
+     */
+    List<Pet> getPetsByOrderId(Long orderId);
 }

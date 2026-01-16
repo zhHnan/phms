@@ -101,6 +101,14 @@
             取消订单
           </button>
         </div>
+        <div v-else-if="order.status === 3 || order.status === 4" class="mt-4 pt-4 border-t flex justify-end space-x-4">
+          <button 
+            @click.stop="deleteOrder(order)" 
+            class="text-gray-500 hover:text-gray-700"
+          >
+            删除订单
+          </button>
+        </div>
       </div>
     </div>
 
@@ -122,13 +130,45 @@
         下一页
       </button>
     </div>
+
+    <!-- 收银台弹窗 -->
+    <teleport to="body">
+      <div v-if="cashierVisible" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50" @click="closeCashier"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-[360px] p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">收银台</h3>
+            <button class="text-gray-400 hover:text-gray-600" @click="closeCashier">✕</button>
+          </div>
+          <div class="text-sm text-gray-500">订单号：{{ selectedOrder?.orderNo }}</div>
+          <div class="mt-4 flex flex-col items-center gap-3">
+            <div class="w-48 h-48 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50">
+              <img v-if="qrCodeUrl" :src="qrCodeUrl" class="w-44 h-44" alt="支付二维码" />
+              <div v-else class="text-gray-400">生成中...</div>
+            </div>
+            <div class="text-sm text-gray-600">请使用手机扫码完成支付</div>
+            <div v-if="scanStatus === 'waiting'" class="text-xs text-gray-400">等待扫码回调...</div>
+            <div v-else class="text-xs text-green-600">支付成功</div>
+          </div>
+          <div class="mt-6 flex gap-3">
+            <button
+              class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              @click="closeCashier"
+              :disabled="paying"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import request from '@/utils/request'
-import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
+import { showError, showConfirm, showSuccess } from '@/utils/message'
 import { formatDateTime } from '@/utils/datetime'
 
 interface Pet {
@@ -168,10 +208,22 @@ const tabs = [
 
 const orders = ref<Order[]>([])
 const loading = ref(true)
+const paying = ref(false)
 const currentTab = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const cashierVisible = ref(false)
+const scanStatus = ref<'waiting' | 'success'>('waiting')
+const selectedOrder = ref<Order | null>(null)
+const payTimer = ref<number | null>(null)
+
+const qrCodeUrl = computed(() => {
+  if (!selectedOrder.value?.id) return ''
+  const callbackUrl = `${window.location.origin}/api/order/${selectedOrder.value.id}/pay-scan`
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(callbackUrl)}`
+})
 
 const getStatusName = (status: number) => {
   const map: Record<number, string> = {
@@ -342,21 +394,49 @@ const cancelOrder = async (order: Order) => {
   }
 }
 
-const payOrder = async (order: Order) => {
+const deleteOrder = async (order: Order) => {
+  if (!await showConfirm('确定要删除该订单吗？')) return
+
   try {
-    // 模拟支付延迟 2 秒
-    showInfo('正在处理支付...')
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // 调用支付接口
-    await request.post(`/order/${order.id}/pay`)
-    
-    // 更新订单状态
-    order.status = 1
-    showSuccess('支付成功！请在入住当天12:00后办理入住手续')
+    await request.delete(`/order/${order.id}`)
+    orders.value = orders.value.filter(o => o.id !== order.id)
+    showSuccess('订单已删除')
   } catch (error: any) {
-    showError(error.message || '支付失败')
+    showError(error.message || '删除失败')
   }
+}
+
+const payOrder = async (order: Order) => {
+  selectedOrder.value = order
+  openCashier()
+}
+
+const openCashier = () => {
+  paying.value = false
+  scanStatus.value = 'waiting'
+  cashierVisible.value = true
+  if (payTimer.value) window.clearTimeout(payTimer.value)
+  payTimer.value = window.setTimeout(async () => {
+    if (!selectedOrder.value) return
+    try {
+      await request.get(`/order/${selectedOrder.value.id}/pay-scan`)
+      selectedOrder.value.status = 1
+      scanStatus.value = 'success'
+      showSuccess('支付成功！请在入住当天12:00后办理入住手续')
+      closeCashier()
+    } catch (error: any) {
+      showError(error.message || '支付失败')
+      scanStatus.value = 'waiting'
+    }
+  }, 10000)
+}
+
+const closeCashier = () => {
+  if (payTimer.value) window.clearTimeout(payTimer.value)
+  payTimer.value = null
+  paying.value = false
+  cashierVisible.value = false
+  scanStatus.value = 'waiting'
 }
 
 watch(currentTab, () => {
@@ -375,5 +455,6 @@ onMounted(() => {
 onUnmounted(() => {
   // 组件销毁时停止定时器
   stopCountdown()
+  if (payTimer.value) window.clearTimeout(payTimer.value)
 })
 </script>

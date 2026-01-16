@@ -7,7 +7,7 @@
     <div v-if="loading" class="text-center py-20">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
     </div>
-
+              我已扫码
     <div v-else-if="order" class="space-y-6">
       <!-- 订单状态 -->
       <div class="card">
@@ -164,9 +164,9 @@
                 <div class="flex items-center justify-between">
                   <span 
                     class="px-2 py-1 rounded text-sm"
-                    :class="getLogTypeClass(log.logType)"
+                    :class="getCareTypeClass(log.careType)"
                   >
-                    {{ getLogTypeName(log.logType) }}
+                    {{ getcareTypeName(log.careType) }}
                   </span>
                   <span class="text-xs text-gray-500">{{ formatDateTime(log.createdAt) }}</span>
                 </div>
@@ -191,7 +191,7 @@
       <!-- 操作按钮 -->
       <div v-if="order.status === 0" class="flex justify-center space-x-4">
         <button 
-          @click="payOrder"
+          @click="openCashier"
           :disabled="paying"
           class="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
         >
@@ -215,11 +215,45 @@
         </button>
       </div>
     </div>
+
+    <!-- 收银台弹窗 -->
+    <teleport to="body">
+      <div v-if="cashierVisible" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50" @click="closeCashier"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-[360px] p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">收银台</h3>
+            <button class="text-gray-400 hover:text-gray-600" @click="closeCashier">✕</button>
+          </div>
+          <div class="text-sm text-gray-500">订单号：{{ order?.orderNo }}</div>
+          <div class="mt-4 flex flex-col items-center gap-3">
+            <div class="w-48 h-48 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50">
+              <img v-if="qrCodeUrl" :src="qrCodeUrl" class="w-44 h-44" alt="支付二维码" />
+              <div v-else class="text-gray-400">生成中...</div>
+            </div>
+            <div class="text-sm text-gray-600">
+              请使用手机扫码完成支付
+            </div>
+            <div v-if="scanStatus === 'waiting'" class="text-xs text-gray-400">等待扫码回调...</div>
+            <div v-else class="text-xs text-green-600">支付成功</div>
+          </div>
+          <div class="mt-6 flex gap-3">
+            <button
+              class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              @click="closeCashier"
+              :disabled="paying"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import request from '@/utils/request'
 import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
@@ -253,7 +287,7 @@ interface Order {
 
 interface CareLog {
   id: number
-  logType: string
+  careType: number
   content: string
   staffName: string
   createdAt: string
@@ -274,6 +308,15 @@ const order = ref<Order | null>(null)
 const careLogs = ref<CareLog[]>([])
 const loading = ref(true)
 const paying = ref(false)
+const cashierVisible = ref(false)
+const scanStatus = ref<'waiting' | 'success'>('waiting')
+const payTimer = ref<number | null>(null)
+
+const qrCodeUrl = computed(() => {
+  if (!order.value?.id) return ''
+  const callbackUrl = `${window.location.origin}/api/order/${order.value.id}/pay-scan`
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(callbackUrl)}`
+})
 
 const review = ref<HotelReview | null>(null)
 const submittingReview = ref(false)
@@ -332,26 +375,52 @@ const getRoomIcon = (type: string) => {
   return '👑'
 }
 
-const getLogTypeName = (type: string) => {
-  const map: Record<string, string> = {
-    feeding: '喂食',
-    cleaning: '清洁',
-    walking: '遛弯',
-    health_check: '健康检查',
-    other: '其他'
+const getcareTypeName = (type: number | string) => {
+  const numberMap: Record<number, string> = {
+    1: '喂食',
+    2: '遛弯',
+    3: '清洁',
+    4: '体检',
+    5: '其他',
+    6: '入住登记'
   }
-  return map[type] || type
+  const stringMap: Record<string, string> = {
+    feeding: '喂食',
+    walking: '遛弯',
+    cleaning: '清洁',
+    health_check: '体检',
+    other: '其他',
+    check_in: '入住登记',
+    checkin: '入住登记'
+  }
+  if (typeof type === 'number') {
+    return numberMap[type] || String(type)
+  }
+  return stringMap[type] || String(type ?? '')
 }
 
-const getLogTypeClass = (type: string) => {
-  const map: Record<string, string> = {
-    feeding: 'bg-green-100 text-green-800',
-    cleaning: 'bg-blue-100 text-blue-800',
-    walking: 'bg-yellow-100 text-yellow-800',
-    health_check: 'bg-red-100 text-red-800',
-    other: 'bg-gray-100 text-gray-800'
+const getCareTypeClass = (type: number | string) => {
+  const numberMap: Record<number, string> = {
+    1: 'bg-green-100 text-green-600',
+    2: 'bg-yellow-100 text-yellow-600',
+    3: 'bg-blue-100 text-blue-600',
+    4: 'bg-red-100 text-red-600',
+    5: 'bg-gray-100 text-gray-600',
+    6: 'bg-indigo-100 text-indigo-600'
   }
-  return map[type] || 'bg-gray-100 text-gray-800'
+  const stringMap: Record<string, string> = {
+    feeding: 'bg-green-100 text-green-600',
+    walking: 'bg-yellow-100 text-yellow-600',
+    cleaning: 'bg-blue-100 text-blue-600',
+    health_check: 'bg-red-100 text-red-600',
+    other: 'bg-gray-100 text-gray-600',
+    check_in: 'bg-indigo-100 text-indigo-600',
+    checkin: 'bg-indigo-100 text-indigo-600'
+  }
+  if (typeof type === 'number') {
+    return numberMap[type] || 'bg-gray-100 text-gray-600'
+  }
+  return stringMap[type] || 'bg-gray-100 text-gray-600'
 }
 
 const getLogImages = (log: CareLog): string[] => {
@@ -387,8 +456,8 @@ const getPetInfo = (order: Order): Pet[] => {
   if (order.petIds) {
     try {
       const ids = typeof order.petIds === 'string' ? JSON.parse(order.petIds) : order.petIds
-      return ids.map((_, idx: number) => ({
-        id: idx,
+      return (ids as Array<number | string>).map((petId, idx: number) => ({
+        id: typeof petId === 'number' ? petId : idx,
         name: `宠物${idx + 1}`,
         type: 0
       }))
@@ -409,7 +478,12 @@ const fetchOrder = async () => {
     // 如果订单在入住中，获取照料记录
     if (res.data.status === 2) {
       const logsRes = await request.get(`/care-log/order/${route.params.id}`)
-      careLogs.value = logsRes.data || []
+      const logs = logsRes.data || []
+      careLogs.value = logs.sort((a: CareLog, b: CareLog) => {
+        const timeA = new Date(a.createdAt).getTime()
+        const timeB = new Date(b.createdAt).getTime()
+        return timeA - timeB
+      })
     }
 
     // 如果订单已完成，尝试获取评价
@@ -466,24 +540,35 @@ const cancelOrder = async () => {
 
 const payOrder = async () => {
   if (!order.value) return
-  
-  paying.value = true
-  try {
-    // 模拟支付延迟 2 秒
-    showInfo('正在处理支付...')
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // 调用支付接口
-    await request.post(`/order/${route.params.id}/pay`)
-    
-    // 更新订单状态
-    order.value.status = 1
-    showSuccess('支付成功！请在入住当天12:00后办理入住手续')
-  } catch (error: any) {
-    showError(error.message || '支付失败')
-  } finally {
-    paying.value = false
-  }
+  openCashier()
+}
+
+const openCashier = () => {
+  paying.value = false
+  scanStatus.value = 'waiting'
+  cashierVisible.value = true
+  if (payTimer.value) window.clearTimeout(payTimer.value)
+  payTimer.value = window.setTimeout(async () => {
+    if (!order.value) return
+    try {
+      await request.get(`/order/${route.params.id}/pay-scan`)
+      order.value.status = 1
+      scanStatus.value = 'success'
+      showSuccess('支付成功！请在入住当天12:00后办理入住手续')
+      closeCashier()
+    } catch (error: any) {
+      showError(error.message || '支付失败')
+      scanStatus.value = 'waiting'
+    }
+  }, 10000)
+}
+
+const closeCashier = () => {
+  if (payTimer.value) window.clearTimeout(payTimer.value)
+  payTimer.value = null
+  paying.value = false
+  cashierVisible.value = false
+  scanStatus.value = 'waiting'
 }
 
 onMounted(fetchOrder)

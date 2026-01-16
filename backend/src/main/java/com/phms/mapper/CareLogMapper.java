@@ -67,7 +67,7 @@ public interface CareLogMapper extends BaseMapper<CareLog> {
 
 	    @Select("SELECT cl.id, cl.order_id AS orderId, o.order_no AS orderNo, r.room_no AS roomNo, " +
 		    "(SELECT GROUP_CONCAT(p.name SEPARATOR '、') FROM biz_pets p WHERE JSON_CONTAINS(o.pet_ids, CAST(p.id AS JSON), '$') AND p.is_deleted = 0) AS petName, " +
-		    "CASE cl.care_type WHEN 1 THEN 'feeding' WHEN 2 THEN 'walking' WHEN 3 THEN 'cleaning' WHEN 4 THEN 'health_check' ELSE 'other' END AS logType, " +
+		    "CASE cl.care_type WHEN 1 THEN 'feeding' WHEN 2 THEN 'walking' WHEN 3 THEN 'cleaning' WHEN 4 THEN 'health_check' WHEN 5 THEN 'check_in' ELSE 'other' END AS careType, " +
 		    "cl.content, cl.images, s.real_name AS staffName, cl.created_at AS createdAt " +
 		    "FROM biz_care_logs cl " +
 		    "LEFT JOIN biz_orders o ON cl.order_id = o.id " +
