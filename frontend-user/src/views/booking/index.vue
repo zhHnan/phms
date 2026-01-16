@@ -27,28 +27,17 @@
       <!-- 入住信息 -->
       <div class="card">
         <h2 class="text-lg font-semibold mb-4">入住信息</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">入住日期 *</label>
-            <input 
-              type="date" 
-              v-model="form.checkInDate" 
-              :min="today"
-              required
-              class="input-field"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">退房日期 *</label>
-            <input 
-              type="date" 
-              v-model="form.checkOutDate" 
-              :min="form.checkInDate || today"
-              required
-              class="input-field"
-            />
-          </div>
-        </div>
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="入住日期"
+          end-placeholder="退房日期"
+          value-format="YYYY-MM-DD"
+          :disabled-date="disablePastDates"
+          @change="handleDateRangeChange"
+          class="w-full"
+        />
         <div v-if="days > 0" class="mt-4 p-4 bg-primary-50 rounded-lg">
           <p class="text-primary-800">
             入住 <strong>{{ days }}</strong> 天，预计费用: 
@@ -246,6 +235,8 @@ const formatLocalDate = (d: Date) => {
 
 const today = formatLocalDate(new Date())
 
+const dateRange = ref<string[]>([])
+
 // 获取默认日期（优先从URL参数获取，否则使用明天和后天）
 const getDefaultDates = () => {
   // 先尝试从URL参数获取
@@ -277,6 +268,27 @@ const form = reactive({
   checkOutDate: defaultDates.checkOut,
   remark: ''
 })
+
+dateRange.value = [form.checkInDate, form.checkOutDate]
+
+const disablePastDates = (date: Date) => {
+  const t = new Date()
+  t.setHours(0, 0, 0, 0)
+  return date < t
+}
+
+const handleDateRangeChange = (range: string[]) => {
+  if (!range || range.length !== 2) return
+  let [start, end] = range
+  if (start === end) {
+    const nextDay = new Date(start)
+    nextDay.setDate(nextDay.getDate() + 1)
+    end = formatLocalDate(nextDay)
+    dateRange.value = [start, end]
+  }
+  form.checkInDate = start
+  form.checkOutDate = end
+}
 
 // 解析日期字符串为 Date（忽略时区偏移导致的跨天问题）
 const parseDate = (dateStr: string) => {

@@ -9,6 +9,17 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Toast 统一样式 */
+.phms-toast {
+    border-radius: 12px;
+    padding: 10px 14px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.phms-toast .el-message__content {
+    font-size: 14px;
+}
+
 /* 自定义组件样式 */
 @layer components {
     .btn-primary {
