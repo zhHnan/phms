@@ -5,7 +5,8 @@
     </button>
 
     <div v-if="loading" class="text-center py-20">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
+      <div
+          class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
     </div>
 
     <div v-else-if="room" class="flex flex-col">
@@ -13,255 +14,279 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- 图片区 - 轮播图 -->
           <div class="relative">
-          <div v-if="getRoomImages(room.images).length > 0" class="relative">
-            <!-- 主图 -->
-            <div class="h-64 md:h-96 bg-gray-200 rounded-lg overflow-hidden relative">
-              <!-- 添加过渡效果 -->
-              <transition name="fade" mode="out-in">
-                <img 
-                  :key="currentImageIndex"
-                  :src="getRoomImages(room.images)[currentImageIndex]" 
-                  :alt="room.typeName"
-                  class="w-full h-full object-cover"
+            <div v-if="getRoomImages(room.images).length > 0" class="relative">
+              <!-- 主图 -->
+              <div class="h-64 md:h-96 bg-gray-200 rounded-lg overflow-hidden relative">
+                <!-- 添加过渡效果 -->
+                <transition name="fade" mode="out-in">
+                  <img
+                      :key="currentImageIndex"
+                      :src="getRoomImages(room.images)[currentImageIndex]"
+                      :alt="room.typeName"
+                      class="w-full h-full object-cover"
+                  />
+                </transition>
+
+                <!-- 预加载下一张和上一张图片 -->
+                <img
+                    v-for="(img, idx) in getRoomImages(room.images)"
+                    :key="`preload-${idx}`"
+                    v-show="false"
+                    :src="img"
+                    alt="预加载"
                 />
-              </transition>
-              
-              <!-- 预加载下一张和上一张图片 -->
-              <img 
-                v-for="(img, idx) in getRoomImages(room.images)" 
-                :key="`preload-${idx}`"
-                v-show="false"
-                :src="img" 
-                alt="预加载"
-              />
-            </div>
-            
-            <!-- 切换按钮 -->
-            <button 
-              v-if="getRoomImages(room.images).length > 1"
-              @click.stop="prevImage"
-              class="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 hover:scale-110 transition-all z-10"
-            >
-              ←
-            </button>
-            <button 
-              v-if="getRoomImages(room.images).length > 1"
-              @click.stop="nextImage"
-              class="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 hover:scale-110 transition-all z-10"
-            >
-              →
-            </button>
-            
-            <!-- 指示器 -->
-            <div v-if="getRoomImages(room.images).length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-              <button 
-                v-for="(_, idx) in getRoomImages(room.images)" 
-                :key="idx"
-                @click.stop="currentImageIndex = Number(idx)"
-                class="w-2 h-2 rounded-full transition-all duration-300"
-                :class="Number(idx) === currentImageIndex ? 'bg-white w-6' : 'bg-white bg-opacity-50 hover:bg-opacity-80'"
-              />
-            </div>
-            
-            <!-- 缩略图 -->
-            <div v-if="getRoomImages(room.images).length > 1" class="mt-4 grid grid-cols-5 gap-2">
+              </div>
+
+              <!-- 切换按钮 -->
               <button
-                v-for="(img, idx) in getRoomImages(room.images).slice(0, 5)"
-                :key="idx"
-                @click.stop="currentImageIndex = Number(idx)"
-                class="aspect-square rounded overflow-hidden border-2 transition-all duration-200"
-                :class="Number(idx) === currentImageIndex ? 'border-primary-600 scale-105' : 'border-transparent hover:border-gray-300'"
+                  v-if="getRoomImages(room.images).length > 1"
+                  @click.stop="prevImage"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 hover:scale-110 transition-all z-10"
               >
-                <img :src="img" :alt="`图片${Number(idx) + 1}`" class="w-full h-full object-cover" loading="lazy" />
+                ←
               </button>
+              <button
+                  v-if="getRoomImages(room.images).length > 1"
+                  @click.stop="nextImage"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 hover:scale-110 transition-all z-10"
+              >
+                →
+              </button>
+
+              <!-- 指示器 -->
+              <div v-if="getRoomImages(room.images).length > 1"
+                   class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                <button
+                    v-for="(_, idx) in getRoomImages(room.images)"
+                    :key="idx"
+                    @click.stop="currentImageIndex = Number(idx)"
+                    class="w-2 h-2 rounded-full transition-all duration-300"
+                    :class="Number(idx) === currentImageIndex ? 'bg-white w-6' : 'bg-white bg-opacity-50 hover:bg-opacity-80'"
+                />
+              </div>
+
+              <!-- 缩略图 -->
+              <div v-if="getRoomImages(room.images).length > 1" class="mt-4 grid grid-cols-5 gap-2">
+                <button
+                    v-for="(img, idx) in getRoomImages(room.images).slice(0, 5)"
+                    :key="idx"
+                    @click.stop="currentImageIndex = Number(idx)"
+                    class="aspect-square rounded overflow-hidden border-2 transition-all duration-200"
+                    :class="Number(idx) === currentImageIndex ? 'border-primary-600 scale-105' : 'border-transparent hover:border-gray-300'"
+                >
+                  <img :src="img" :alt="`图片${Number(idx) + 1}`" class="w-full h-full object-cover" loading="lazy"/>
+                </button>
+              </div>
+            </div>
+            <div v-else class="h-64 md:h-96 bg-gray-200 rounded-lg flex items-center justify-center text-8xl">
+              {{ getRoomIcon(room.typeName) }}
+            </div>
+            <!-- 详细描述 -->
+            <div v-if="room.description" class="mt-8 pt-8 border-t">
+              <h2 class="text-xl font-semibold mb-4">房间介绍</h2>
+              <div class="prose text-gray-600">
+                <p>{{ room.description }}</p>
+              </div>
             </div>
           </div>
-          <div v-else class="h-64 md:h-96 bg-gray-200 rounded-lg flex items-center justify-center text-8xl">
-            {{ getRoomIcon(room.typeName) }}
-          </div>
-          <!-- 详细描述 -->
-        <div v-if="room.description" class="mt-8 pt-8 border-t">
-          <h2 class="text-xl font-semibold mb-4">房间介绍</h2>
-          <div class="prose text-gray-600">
-            <p>{{ room.description }}</p>
-          </div>
-        </div>
-        </div>
 
           <!-- 信息区 -->
           <div class="min-w-0">
-          <div class="mb-4">
-            <h1 class="text-3xl font-bold text-gray-900">{{ room.typeNameDisplay || room.typeName }}</h1>
-          </div>
-
-          <p v-if="room.hotelName" class="text-gray-500 mb-1">{{ room.hotelName }}</p>
-          <p v-if="room.hotelAddress" class="text-gray-500 mb-4">{{ room.hotelAddress }}</p>
-
-          <p class="text-gray-500 mb-4">房间号: {{ room.roomNo }}</p>
-
-          <div class="flex flex-col gap-2 mb-4">
-            <div class="flex items-center gap-2 text-sm text-gray-700">
-              <span class="font-medium">房间评分:</span>
-              <span class="text-yellow-500 text-base">{{ renderStars(roomAvgScore) }}</span>
-              <span class="text-gray-500">{{ roomAvgScore.toFixed(1) }}/5</span>
-              <span class="text-gray-400 text-xs">({{ roomReviewCount }} 人评价)</span>
+            <div class="mb-4">
+              <h1 class="text-3xl font-bold text-gray-900">{{ room.typeNameDisplay || room.typeName }}</h1>
             </div>
-            <div class="flex items-center gap-2 text-sm text-gray-700">
-              <span class="font-medium">酒店评分:</span>
-              <span class="text-yellow-500 text-base">{{ renderStars(hotelAvgScore) }}</span>
-              <span class="text-gray-500">{{ hotelAvgScore.toFixed(1) }}/5</span>
-              <span class="text-gray-400 text-xs">({{ hotelReviewCount }} 人评价)</span>
+
+            <p v-if="room.hotelName" class="text-gray-500 mb-1">{{ room.hotelName }}</p>
+            <p v-if="room.hotelAddress" class="text-gray-500 mb-4">{{ room.hotelAddress }}</p>
+
+            <p class="text-gray-500 mb-4">房间号: {{ room.roomNo }}</p>
+
+            <div class="flex flex-col gap-2 mb-4">
+              <div class="flex items-center gap-2 text-sm text-gray-700">
+                <span class="font-medium">房间评分:</span>
+                <span class="text-yellow-500 text-base">{{ renderStars(roomAvgScore) }}</span>
+                <span class="text-gray-500">{{ roomAvgScore.toFixed(1) }}/5</span>
+                <span class="text-gray-400 text-xs">({{ roomReviewCount }} 人评价)</span>
+              </div>
+              <div class="flex items-center gap-2 text-sm text-gray-700">
+                <span class="font-medium">酒店评分:</span>
+                <span class="text-yellow-500 text-base">{{ renderStars(hotelAvgScore) }}</span>
+                <span class="text-gray-500">{{ hotelAvgScore.toFixed(1) }}/5</span>
+                <span class="text-gray-400 text-xs">({{ hotelReviewCount }} 人评价)</span>
+              </div>
             </div>
-          </div>
 
-          <div class="text-3xl font-bold text-primary-600 mb-6">
-            ¥{{ room.pricePerNight }}
-            <span class="text-lg text-gray-500">/天</span>
-          </div>
+            <div class="text-3xl font-bold text-primary-600 mb-6">
+              ¥{{ room.pricePerNight }}
+              <span class="text-lg text-gray-500">/天</span>
+            </div>
 
-          <!-- 日期选择 -->
-          <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 class="font-semibold mb-3">选择入住日期</h3>
-            <el-date-picker
-              v-model="dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="入住日期"
-              end-placeholder="退房日期"
-              value-format="YYYY-MM-DD"
-              :disabled-date="disablePastDates"
-              @change="handleDateRangeChange"
-              class="w-full room-date-picker"
-            />
-            <!-- 可用性提示 -->
-            <div v-if="availabilityChecked" class="mt-3 flex items-center gap-2">
-              <span 
-                v-if="isAvailable"
-                class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+            <!-- 日期选择 -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 class="font-semibold mb-3">选择入住日期</h3>
+              <el-date-picker
+                  v-model="dateRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="入住日期"
+                  end-placeholder="退房日期"
+                  value-format="YYYY-MM-DD"
+                  :disabled-date="disablePastDates"
+                  @change="handleDateRangeChange"
+                  class="w-full room-date-picker"
+              />
+              <!-- 可用性提示 -->
+              <div v-if="availabilityChecked" class="mt-3 flex items-center gap-2">
+              <span
+                  v-if="isAvailable"
+                  class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
               >
                 ✓ 该时间段可预订
               </span>
-              <span 
-                v-else
-                class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium"
-              >
+                <span
+                    v-else
+                    class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium"
+                >
                 ✗ 该时间段不可预订
               </span>
+              </div>
             </div>
-          </div>
 
-          <div class="space-y-4 mb-8">
-            <div class="flex items-center text-gray-600">
-              <span class="w-24">容量:</span>
-              <span>{{ room.maxPetNum }}只宠物</span>
-            </div>
-            <div v-if="getRoomFeatures(room.features).length > 0" class="flex items-start text-gray-600">
-              <span class="w-24 flex-shrink-0">设施:</span>
-              <div class="flex flex-wrap gap-2">
-                <span 
-                  v-for="(feature, idx) in getRoomFeatures(room.features)" 
-                  :key="idx"
-                  class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm"
+            <div class="space-y-4 mb-8">
+              <div class="flex items-center text-gray-600">
+                <span class="w-24">容量:</span>
+                <span>{{ room.maxPetNum }}只宠物</span>
+              </div>
+              <div v-if="getRoomFeatures(room.features).length > 0" class="flex items-start text-gray-600">
+                <span class="w-24 flex-shrink-0">设施:</span>
+                <div class="flex flex-wrap gap-2">
+                <span
+                    v-for="(feature, idx) in getRoomFeatures(room.features)"
+                    :key="idx"
+                    class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm"
                 >
                   {{ feature }}
                 </span>
-              </div>
-            </div>
-            <!-- <div v-if="room.description" class="flex items-start text-gray-600">
-              <span class="w-24 flex-shrink-0">介绍:</span>
-              <span>{{ room.description }}</span>
-            </div> -->
-          </div>
-        </div>
-      </div>
-
-      <!-- 商品选购和按钮 -->
-      <div class="w-full">
-        <div v-if="productList.length" class="card w-full flex flex-col mb-6">
-           <h2 class="text-xl font-semibold mb-4">选购</h2>
-          <div class="flex gap-4 overflow-x-auto pb-2 product-scroll-h justify-center">
-            <div v-for="p in productList" :key="p.id" class="p-4 border rounded-lg flex-shrink-0 w-48">
-              <div class="flex flex-col gap-2 h-full">
-                <div class="w-full h-24 rounded bg-gray-100 overflow-hidden flex-shrink-0">
-                  <img
-                    v-if="getProductImages(p.images).length"
-                    :src="getProductImages(p.images)[0]"
-                    :alt="p.name"
-                    class="w-full h-full object-cover"
-                  />
-                  <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-2xl">📦</div>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-medium text-sm truncate">{{ p.name }}</p>
-                  <p class="text-xs text-gray-500">¥{{ p.price }} / 件</p>
-                  <p class="text-xs text-gray-400 mt-1">库存：{{ p.stock }}</p>
+              </div>
+              <!-- <div v-if="room.description" class="flex items-start text-gray-600">
+                <span class="w-24 flex-shrink-0">介绍:</span>
+                <span>{{ room.description }}</span>
+              </div> -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 商品选购和按钮 -->
+        <div class="w-full">
+          <div v-if="productList.length" class="card w-full flex flex-col mb-6">
+            <h2 class="text-xl font-semibold mb-4">选购</h2>
+            <div class="relative">
+              <div class="product-scroll flex gap-4 overflow-x-auto pb-4"
+                   :class="productList.length <= 3 ? 'justify-center' : ''" ref="productScroll">
+                <div v-for="p in productList" :key="p.id" class="p-4 border rounded-lg flex-shrink-0 w-48">
+                  <div class="flex flex-col gap-2 h-full">
+                    <div class="w-full h-24 rounded bg-gray-100 overflow-hidden flex-shrink-0">
+                      <img
+                          v-if="getProductImages(p.images).length"
+                          :src="getProductImages(p.images)[0]"
+                          :alt="p.name"
+                          class="w-full h-full object-cover"
+                      />
+                      <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-2xl">📦</div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-medium text-sm truncate">{{ p.name }}</p>
+                      <p class="text-xs text-gray-500">¥{{ p.price }} / 件</p>
+                      <p class="text-xs text-gray-400 mt-1">库存：{{ p.stock }}</p>
+                    </div>
+                    <el-input-number
+                        v-model="productQty[p.id]"
+                        :min="0"
+                        :max="p.stock"
+                        size="small"
+                        class="w-full"
+                    />
+                    <p v-if="p.description" class="text-xs text-gray-500 line-clamp-2">{{ p.description }}</p>
+                  </div>
                 </div>
-                <el-input-number
-                  v-model="productQty[p.id]"
-                  :min="0"
-                  :max="p.stock"
-                  size="small"
-                  class="w-full"
-                />
-                <p v-if="p.description" class="text-xs text-gray-500 line-clamp-2">{{ p.description }}</p>
               </div>
+              <button
+                  v-if="productScrollable"
+                  class="scroll-btn left"
+                  aria-label="向左微移"
+                  @click="scrollProducts('left')"
+              >
+                ←
+              </button>
+              <button
+                  v-if="productScrollable"
+                  class="scroll-btn right"
+                  aria-label="向右微移"
+                  @click="scrollProducts('right')"
+              >
+                →
+              </button>
+            </div>
+            <div v-if="productScrollable" class="text-center mt-3 text-sm text-gray-500">
+              ← 左右滑动查看更多商品 →
             </div>
           </div>
-        </div>
 
-        <div class="flex justify-center">
-          <button 
-            v-if="isAvailable && availabilityChecked"
-            @click="handleBooking"
-            class="btn-primary px-12 py-3 text-lg"
-          >
-            立即预订
-          </button>
-          <button 
-            v-else-if="availabilityChecked && !isAvailable"
-            disabled
-            class="px-12 py-3 text-lg bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed"
-          >
-            该时间段不可预订
-          </button>
-          <button 
-            v-else
-            disabled
-            class="px-12 py-3 text-lg bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed"
-          >
-            请选择入住日期
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 评论区域 - 独立展示 -->
-    <div v-if="reviews.length" class="mt-8">
-      <div class="card">
-        <h2 class="text-xl font-semibold mb-6">用户评价</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="review in reviews" :key="review.orderId" class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex items-center gap-1">
-                <span class="text-yellow-500">{{ renderStars(review.score) }}</span>
-                <span class="text-gray-600 text-sm font-medium">{{ review.score }}.0分</span>
-              </div>
-              <span class="text-xs text-gray-400">{{ formatReviewDate(review.createdAt) }}</span>
-            </div>
-            <p class="text-sm font-medium text-gray-700 mb-2">{{ review.userName || '匿名用户' }}</p>
-            <p v-if="review.content" class="text-sm text-gray-600">{{ review.content }}</p>
-            <p v-else class="text-sm text-gray-400 italic">未留评价内容</p>
+          <div class="flex justify-center">
+            <button
+                v-if="isAvailable && availabilityChecked"
+                @click="handleBooking"
+                class="btn-primary px-12 py-3 text-lg"
+            >
+              立即预订
+            </button>
+            <button
+                v-else-if="availabilityChecked && !isAvailable"
+                disabled
+                class="px-12 py-3 text-lg bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed"
+            >
+              该时间段不可预订
+            </button>
+            <button
+                v-else
+                disabled
+                class="px-12 py-3 text-lg bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed"
+            >
+              请选择入住日期
+            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- 评论区域 - 独立展示 -->
+      <div v-if="reviews.length" class="mt-8">
+        <div class="card">
+          <h2 class="text-xl font-semibold mb-6">用户评价</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="review in reviews" :key="review.orderId"
+                 class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center gap-1">
+                  <span class="text-yellow-500">{{ renderStars(review.score) }}</span>
+                  <span class="text-gray-600 text-sm font-medium">{{ review.score }}.0分</span>
+                </div>
+                <span class="text-xs text-gray-400">{{ formatReviewDate(review.createdAt) }}</span>
+              </div>
+              <p class="text-sm font-medium text-gray-700 mb-2">{{ review.userName || '匿名用户' }}</p>
+              <p v-if="review.content" class="text-sm text-gray-600">{{ review.content }}</p>
+              <p v-else class="text-sm text-gray-400 italic">未留评价内容</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <button
-    class="fixed bottom-8 right-6 bg-primary-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-primary-700 transition-colors z-50 flex items-center gap-2"
-    @click="openServiceChat"
-    title="联系客服"
+      class="fixed bottom-8 right-6 bg-primary-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-primary-700 transition-colors z-50 flex items-center gap-2"
+      @click="openServiceChat"
+      title="联系客服"
   >
     <span class="text-lg">💬</span>
     <span class="font-medium">联系客服</span>
@@ -270,7 +295,8 @@
   <teleport to="body">
     <div v-if="serviceVisible" class="fixed inset-0 z-50 flex items-end justify-end pointer-events-none">
       <div class="absolute inset-0 bg-black/30 pointer-events-auto" @click="closeServiceChat"></div>
-      <div class="relative w-full sm:w-[420px] h-[520px] sm:h-[600px] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl m-0 sm:m-6 pointer-events-auto flex flex-col overflow-hidden">
+      <div
+          class="relative w-full sm:w-[420px] h-[520px] sm:h-[600px] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl m-0 sm:m-6 pointer-events-auto flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-4 py-3 border-b">
           <div>
             <p class="text-base font-semibold">在线客服</p>
@@ -281,16 +307,17 @@
         </div>
 
         <div class="flex-1 bg-gray-50 px-4 py-3 space-y-3 overflow-y-auto" ref="chatBody">
-          <div v-if="chatMessages.length === 0" class="text-center text-gray-400 text-sm mt-10">正在为您接入客服...</div>
+          <div v-if="chatMessages.length === 0" class="text-center text-gray-400 text-sm mt-10">正在为您接入客服...
+          </div>
           <div
-            v-for="(msg, idx) in chatMessages"
-            :key="idx"
-            class="flex"
-            :class="msg.from === 'me' ? 'justify-end' : 'justify-start'"
+              v-for="(msg, idx) in chatMessages"
+              :key="idx"
+              class="flex"
+              :class="msg.from === 'me' ? 'justify-end' : 'justify-start'"
           >
             <div
-              class="max-w-[70%] px-3 py-2 rounded-2xl text-sm"
-              :class="msg.from === 'me' ? 'bg-primary-600 text-white rounded-br-sm' : 'bg-white border rounded-bl-sm'"
+                class="max-w-[70%] px-3 py-2 rounded-2xl text-sm"
+                :class="msg.from === 'me' ? 'bg-primary-600 text-white rounded-br-sm' : 'bg-white border rounded-bl-sm'"
             >
               <div>{{ msg.text }}</div>
               <div class="mt-1 text-[11px] opacity-70 text-right">{{ formatChatTime(msg.ts) }}</div>
@@ -301,18 +328,18 @@
         <div class="px-4 py-3 border-t bg-white">
           <div class="flex items-center gap-2">
             <input
-              v-model="chatInput"
-              @keyup.enter="sendChat"
-              type="text"
-              placeholder="请输入要咨询的问题"
-              class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
-              :disabled="!connected"
+                v-model="chatInput"
+                @keyup.enter="sendChat"
+                type="text"
+                placeholder="请输入要咨询的问题"
+                class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                :disabled="!connected"
             />
             <button
-              class="px-4 py-2 rounded-lg text-white"
-              :class="connected && chatInput.trim() ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-300 cursor-not-allowed'"
-              @click="sendChat"
-              :disabled="!connected || !chatInput.trim()"
+                class="px-4 py-2 rounded-lg text-white"
+                :class="connected && chatInput.trim() ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-300 cursor-not-allowed'"
+                @click="sendChat"
+                :disabled="!connected || !chatInput.trim()"
             >
               发送
             </button>
@@ -325,8 +352,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import request from '@/utils/request'
 
 interface Room {
@@ -371,6 +398,24 @@ const currentImageIndex = ref(0)
 
 const productList = ref<Product[]>([])
 const productQty = ref<Record<number, number>>({})
+const productScroll = ref<HTMLElement | null>(null)
+const productScrollable = ref(false)
+
+const updateProductScrollable = () => {
+  const el = productScroll.value
+  if (!el) {
+    productScrollable.value = false
+    return
+  }
+  const scrollWidth = el.scrollWidth
+  const clientWidth = el.clientWidth
+  const overflow = (scrollWidth - clientWidth) > 2
+  productScrollable.value = overflow
+}
+const onResize = () => updateProductScrollable()
+let ro: ResizeObserver | null = null
+let mo: MutationObserver | null = null
+let bindRetryTimer: number | null = null
 
 const reviews = ref<Review[]>([])
 
@@ -407,10 +452,10 @@ const formatLocalDate = (d: Date) => {
 const initDefaultDates = () => {
   const today = new Date()
   const defaultCheckIn = new Date(today)
-  
+
   const defaultCheckOut = new Date(defaultCheckIn)
   defaultCheckOut.setDate(defaultCheckIn.getDate() + 3)
-  
+
   minDate.value = formatLocalDate(today)
   checkInDate.value = formatLocalDate(defaultCheckIn)
   checkOutDate.value = formatLocalDate(defaultCheckOut)
@@ -447,7 +492,7 @@ const checkAvailability = async () => {
     availabilityChecked.value = false
     return
   }
-  
+
   try {
     const res = await request.get('/room/check-availability', {
       params: {
@@ -469,8 +514,8 @@ const checkAvailability = async () => {
 const handleBooking = () => {
   if (room.value) {
     const items = Object.entries(productQty.value)
-      .map(([id, qty]) => ({ productId: Number(id), quantity: Number(qty) }))
-      .filter(item => item.quantity > 0)
+        .map(([id, qty]) => ({productId: Number(id), quantity: Number(qty)}))
+        .filter(item => item.quantity > 0)
     router.push({
       path: `/booking/${room.value.id}`,
       query: {
@@ -497,7 +542,7 @@ const scrollChatToBottom = async () => {
 }
 
 const pushMessage = (from: 'me' | 'staff', text: string, ts?: number) => {
-  chatMessages.value.push({ from, text, ts: ts ?? Date.now() })
+  chatMessages.value.push({from, text, ts: ts ?? Date.now()})
   scrollChatToBottom()
 }
 
@@ -571,7 +616,10 @@ const connectWs = (id: number) => {
 const fetchOnlineStaff = async () => {
   try {
     console.log('正在获取在线客服...')
-    const res = await request.get('/support/online-staff')
+    const hotelId = room.value?.hotelId
+    const res = await request.get('/support/online-staff', {
+      params: { hotelId }
+    })
     console.log('客服API响应:', res)
     const id = res.data?.id || res.data?.staffId
     if (id) {
@@ -609,7 +657,7 @@ const closeServiceChat = () => {
 const sendChat = () => {
   const text = chatInput.value.trim()
   if (!text || !wsRef.value || wsRef.value.readyState !== WebSocket.OPEN) return
-  wsRef.value.send(JSON.stringify({ text }))
+  wsRef.value.send(JSON.stringify({text}))
   pushMessage('me', text)
   chatInput.value = ''
 }
@@ -671,6 +719,31 @@ const nextImage = () => {
   }
 }
 
+const scrollProducts = (dir: 'left' | 'right') => {
+  const el = productScroll.value
+  if (!el) return
+  const step = 240 // 每次微移像素
+  const delta = dir === 'left' ? -step : step
+  try {
+    // 使用浏览器内置平滑滚动
+    el.scrollBy({left: delta, behavior: 'smooth'})
+  } catch {
+    // 兜底：无平滑滚动支持时，简单动画过渡
+    const start = el.scrollLeft
+    const target = start + delta
+    const duration = 220
+    const t0 = performance.now()
+    const easeOutQuad = (t: number) => 1 - (1 - t) * (1 - t)
+    const animate = (now: number) => {
+      const p = Math.min(1, (now - t0) / duration)
+      const eased = easeOutQuad(p)
+      el.scrollLeft = start + (target - start) * eased
+      if (p < 1) requestAnimationFrame(animate)
+    }
+    requestAnimationFrame(animate)
+  }
+}
+
 const fetchRoom = async () => {
   loading.value = true
   try {
@@ -682,13 +755,13 @@ const fetchRoom = async () => {
       await fetchReviewSummary(room.value.hotelId, room.value.id)
       await fetchReviews(room.value.hotelId)
     }
-    
+
     // 加载完房间后，检查默认日期的可用性
     await checkAvailability()
 
     if (room.value?.hotelId) {
       const productRes = await request.get('/product/user/list', {
-        params: { hotelId: room.value.hotelId }
+        params: {hotelId: room.value.hotelId}
       })
       productList.value = productRes.data || []
       const initQty: Record<number, number> = {}
@@ -696,6 +769,8 @@ const fetchRoom = async () => {
         initQty[p.id] = 0
       })
       productQty.value = initQty
+      await nextTick()
+      updateProductScrollable()
     }
   } catch (error) {
     console.error('获取房间详情失败:', error)
@@ -738,7 +813,7 @@ const fetchReviewSummary = async (hotelId: number, roomId: number) => {
 const fetchReviews = async (hotelId: number) => {
   try {
     const res = await request.get(`/hotel-review/list/${hotelId}`, {
-      params: { limit: 10 }
+      params: {limit: 10}
     })
     reviews.value = res.data || []
   } catch (error) {
@@ -755,14 +830,66 @@ const formatReviewDate = (dateStr: string) => {
   return `${year}-${month}-${day}`
 }
 
+watch(productList, async () => {
+  await nextTick()
+  updateProductScrollable()
+})
+
 onMounted(() => {
   initDefaultDates()
   fetchRoom()
+  window.addEventListener('resize', onResize)
+  // 初始渲染后再测量一次，避免异步渲染误判
+  nextTick(() => updateProductScrollable())
+  setTimeout(() => updateProductScrollable(), 200)
+  // 绑定观察器，确保 DOM 更新或尺寸变化时都会触发检测
+  const bindObservers = () => {
+    const el = productScroll.value
+    if (!el) {
+      // 容器尚未出现，稍后重试绑定
+      bindRetryTimer = window.setTimeout(bindObservers, 200)
+      return
+    }
+    try {
+      if ('ResizeObserver' in window) {
+        ro = new ResizeObserver(() => updateProductScrollable())
+        ro.observe(el)
+      }
+    } catch {
+    }
+    try {
+      mo = new MutationObserver(() => updateProductScrollable())
+      mo.observe(el, {childList: true, subtree: true})
+    } catch {
+    }
+    // 立即检测一次
+    updateProductScrollable()
+  }
+  bindObservers()
 })
 
 onUnmounted(() => {
   if (wsRef.value) {
     wsRef.value.close()
+  }
+  window.removeEventListener('resize', onResize)
+  if (ro) {
+    try {
+      ro.disconnect()
+    } catch {
+    }
+    ro = null
+  }
+  if (mo) {
+    try {
+      mo.disconnect()
+    } catch {
+    }
+    mo = null
+  }
+  if (bindRetryTimer) {
+    clearTimeout(bindRetryTimer)
+    bindRetryTimer = null
   }
 })
 </script>
@@ -793,21 +920,58 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.product-scroll-h::-webkit-scrollbar {
-  height: 6px;
+.product-scroll {
+  scroll-snap-type: x mandatory;
+  padding-inline: 4px;
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  /* 隐藏滚动条（跨浏览器） */
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+  scroll-behavior: smooth; /* 平滑滚动 */
 }
 
-.product-scroll-h::-webkit-scrollbar-track {
-  background: transparent;
+.product-scroll > div {
+  scroll-snap-align: start;
 }
 
-.product-scroll-h::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.6);
+.product-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome/Safari */
+}
+
+.scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  user-select: none;
 }
 
-.product-scroll-h {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+.scroll-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.scroll-btn.left {
+  left: -8px;
+}
+
+.scroll-btn.right {
+  right: -8px;
+}
+
+.scroll-btn:active {
+  transform: translateY(-50%) scale(0.98);
 }
 </style>

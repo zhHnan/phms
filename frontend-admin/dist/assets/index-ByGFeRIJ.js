@@ -1,0 +1,1 @@
+import{r as e}from"./index-BHoJcF0t.js";const r=()=>e.get("/dashboard"),t=a=>e.get("/message/page",{params:a}),g=a=>e.put(`/message/${a}/read`),o=()=>e.put("/message/read-all");export{t as a,g as b,r as g,o as m};

@@ -7,7 +7,6 @@
     <div v-if="loading" class="text-center py-20">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
     </div>
-              我已扫码
     <div v-else class="space-y-6">
       <!-- 订单状态 -->
       <div class="card">
