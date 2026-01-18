@@ -110,26 +110,23 @@
           </button>
         </div>
       </div>
+
+      <div v-if="isLoadingMore" class="text-center py-4 text-gray-500">加载中...</div>
+      <div v-else-if="!hasMore" class="text-center py-4 text-gray-400">已加载全部</div>
     </div>
 
-    <!-- 分页 -->
-    <div v-if="total > pageSize" class="flex justify-center mt-8 space-x-2">
-      <button 
-        @click="page--" 
-        :disabled="page === 1"
-        class="btn-secondary disabled:opacity-50"
+    <transition name="fade">
+      <button
+        v-if="showBackToTop"
+        @click="scrollToTop"
+        class="fixed bottom-8 right-8 bg-primary-600 text-white rounded-full p-4 shadow-lg hover:bg-primary-700 transition-all z-50"
+        title="返回顶部"
       >
-        上一页
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
       </button>
-      <span class="px-4 py-2">{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
-      <button 
-        @click="page++" 
-        :disabled="page >= Math.ceil(total / pageSize)"
-        class="btn-secondary disabled:opacity-50"
-      >
-        下一页
-      </button>
-    </div>
+    </transition>
 
     <!-- 收银台弹窗 -->
     <teleport to="body">
@@ -213,6 +210,9 @@ const currentTab = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const isLoadingMore = ref(false)
+const hasMore = ref(true)
+const showBackToTop = ref(false)
 
 const cashierVisible = ref(false)
 const scanStatus = ref<'waiting' | 'success'>('waiting')
@@ -361,25 +361,54 @@ const getPetNames = (order: Order): string[] => {
   return []
 }
 
-const fetchOrders = async () => {
-  loading.value = true
+const fetchOrders = async (isLoadMore = false) => {
+  if (isLoadMore && isLoadingMore.value) return false
+  if (!isLoadMore) loading.value = true
+  if (isLoadMore) isLoadingMore.value = true
   try {
-    const params: any = {
+    const params: Record<string, any> = {
       page: page.value,
       size: pageSize.value
     }
     if (currentTab.value) {
       params.status = currentTab.value
     }
-    
+
     const res = await request.get('/order/my-orders', { params })
-    orders.value = res.data.records
-    total.value = res.data.total
+    const records: Order[] = res.data?.records || []
+    const remoteTotal = typeof res.data?.total === 'number' ? res.data.total : null
+    if (remoteTotal !== null) {
+      total.value = remoteTotal
+    }
+
+    if (isLoadMore) {
+      orders.value = [...orders.value, ...records]
+    } else {
+      orders.value = records
+    }
+
+    const loadedCount = orders.value.length
+    const noMoreByCount = remoteTotal !== null ? loadedCount >= total.value : false
+    const noMoreByPage = records.length < pageSize.value
+    hasMore.value = !(noMoreByCount || noMoreByPage)
+    return true
   } catch (error) {
     console.error('获取订单失败:', error)
+    return false
   } finally {
-    loading.value = false
+    if (isLoadMore) {
+      isLoadingMore.value = false
+    } else {
+      loading.value = false
+    }
   }
+}
+
+const loadMoreOrders = async () => {
+  if (loading.value || isLoadingMore.value || !hasMore.value) return
+  page.value += 1
+  const success = await fetchOrders(true)
+  if (!success) page.value -= 1
 }
 
 const cancelOrder = async (order: Order) => {
@@ -439,22 +468,39 @@ const closeCashier = () => {
   scanStatus.value = 'waiting'
 }
 
-watch(currentTab, () => {
+const handleScroll = () => {
+  showBackToTop.value = window.scrollY > 400
+
+  const scrollTop = window.scrollY
+  const windowHeight = window.innerHeight
+  const docHeight = document.documentElement.scrollHeight
+  if (scrollTop + windowHeight >= docHeight - 200) {
+    loadMoreOrders()
+  }
+}
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+watch(currentTab, async () => {
   page.value = 1
-  fetchOrders()
+  hasMore.value = true
+  orders.value = []
+  await fetchOrders()
 })
 
-watch(page, fetchOrders)
-
-onMounted(() => {
-  fetchOrders()
+onMounted(async () => {
+  await fetchOrders()
   // 启动倒计时定时器
   startCountdown()
+  window.addEventListener('scroll', handleScroll)
 })
 
 onUnmounted(() => {
   // 组件销毁时停止定时器
   stopCountdown()
   if (payTimer.value) window.clearTimeout(payTimer.value)
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>

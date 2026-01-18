@@ -24,13 +24,16 @@ import com.phms.mapper.OrderMapper;
 import com.phms.entity.Staff;
 import com.phms.entity.User;
 import com.phms.service.CareLogService;
+import com.phms.service.OrderItemService;
 import com.phms.service.OrderService;
+import com.phms.service.ProductService;
 import com.phms.service.HotelService;
 import com.phms.service.MessageCenterService;
 import com.phms.service.PetService;
 import com.phms.service.StaffService;
 import com.phms.service.RoomService;
 import com.phms.service.UserService;
+import com.phms.vo.OrderItemVO;
 import com.phms.util.RabbitMQUtil;
 import com.phms.vo.OrderVO;
 import com.phms.vo.PetSimpleVO;
@@ -66,6 +69,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final UserService userService;
     private final MessageCenterService messageCenterService;
     private final CareLogService careLogService;
+    private final ProductService productService;
+    private final OrderItemService orderItemService;
     private final StringRedisTemplate redisTemplate;
     private final RabbitMQUtil rabbitMQUtil;
 
@@ -91,13 +96,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             Integer status) {
         Page<OrderVO> voPage = orderMapper.selectOrderVOPage(page, hotelId, orderNo, petName, userId, status);
         voPage.getRecords().forEach(this::fillPetsInfo);
+        fillItemsInfo(voPage.getRecords());
         return voPage;
     }
 
     @Override
     public OrderVO getOrderVOById(Long id) {
         OrderVO vo = orderMapper.selectOrderVOById(id);
-        fillPetsInfo(vo);
+        if (vo != null) {
+            fillPetsInfo(vo);
+            fillItemsInfo(List.of(vo));
+        }
         return vo;
     }
 
@@ -150,6 +159,51 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         } catch (Exception e) {
             // 解析失败时保持原样，避免影响主流程
             vo.setPets(new ArrayList<>());
+        }
+    }
+
+    private void fillItemsInfo(List<OrderVO> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return;
+        }
+        List<Long> orderIds = orders.stream().map(OrderVO::getId).toList();
+        var itemsMap = orderItemService.listByOrderIds(orderIds);
+        for (OrderVO vo : orders) {
+            List<OrderItemVO> items = itemsMap.getOrDefault(vo.getId(), new ArrayList<>());
+            vo.setItems(items);
+        }
+    }
+
+    private void deductStockForOrder(Order order) {
+        List<OrderItemVO> items = orderItemService.listByOrderId(order.getId());
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (OrderItemVO item : items) {
+            com.phms.entity.Product product = productService.getById(item.getProductId());
+            if (product == null || product.getStatus() == null || product.getStatus() != 1) {
+                throw new BusinessException(ResultCode.PARAM_ERROR, "商品已下架");
+            }
+            if (product.getStock() < item.getQuantity()) {
+                throw new BusinessException(ResultCode.PARAM_ERROR, "商品库存不足");
+            }
+            product.setStock(product.getStock() - item.getQuantity());
+            productService.updateById(product);
+        }
+    }
+
+    private void restoreStockForOrder(Order order) {
+        List<OrderItemVO> items = orderItemService.listByOrderId(order.getId());
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (OrderItemVO item : items) {
+            com.phms.entity.Product product = productService.getById(item.getProductId());
+            if (product == null) {
+                continue;
+            }
+            product.setStock(product.getStock() + item.getQuantity());
+            productService.updateById(product);
         }
     }
 
@@ -277,6 +331,42 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
             BigDecimal totalAmount = room.getPricePerNight().multiply(BigDecimal.valueOf(days));
 
+            // 计算商品金额
+            List<com.phms.dto.OrderItemCreateDTO> itemDTOs = dto.getItems();
+            List<com.phms.entity.OrderItem> orderItems = new ArrayList<>();
+            if (itemDTOs != null && !itemDTOs.isEmpty()) {
+                List<Long> productIds = itemDTOs.stream().map(com.phms.dto.OrderItemCreateDTO::getProductId).toList();
+                List<com.phms.entity.Product> products = productService.listByIds(productIds);
+                if (products.size() != productIds.size()) {
+                    throw new BusinessException(ResultCode.PARAM_ERROR, "存在无效商品");
+                }
+                for (com.phms.dto.OrderItemCreateDTO itemDTO : itemDTOs) {
+                    com.phms.entity.Product product = products.stream()
+                            .filter(p -> p.getId().equals(itemDTO.getProductId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (product == null || product.getStatus() == null || product.getStatus() != 1) {
+                        throw new BusinessException(ResultCode.PARAM_ERROR, "商品已下架");
+                    }
+                    if (!productService.canManageProduct(product.getId(), dto.getHotelId())) {
+                        throw new BusinessException(ResultCode.PARAM_ERROR, "商品不属于当前门店");
+                    }
+                    if (product.getStock() < itemDTO.getQuantity()) {
+                        throw new BusinessException(ResultCode.PARAM_ERROR, "商品库存不足");
+                    }
+                    BigDecimal subtotal = product.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity()));
+                    totalAmount = totalAmount.add(subtotal);
+
+                    com.phms.entity.OrderItem orderItem = new com.phms.entity.OrderItem();
+                    orderItem.setProductId(product.getId());
+                    orderItem.setProductName(product.getName());
+                    orderItem.setPrice(product.getPrice());
+                    orderItem.setQuantity(itemDTO.getQuantity());
+                    orderItem.setSubtotal(subtotal);
+                    orderItems.add(orderItem);
+                }
+            }
+
             // 创建订单
             Order order = new Order();
             order.setOrderNo(generateOrderNo());
@@ -290,6 +380,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             order.setRemark(dto.getRemark());
             order.setStatus(Constants.ORDER_STATUS_PENDING);
             save(order);
+
+            if (!orderItems.isEmpty()) {
+                orderItems.forEach(item -> item.setOrderId(order.getId()));
+                orderItemService.saveBatch(orderItems);
+            }
 
             // 更新房间状态为已预订
             roomService.updateStatus(dto.getRoomId(), Constants.ROOM_STATUS_RESERVED);
@@ -318,6 +413,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ResultCode.ORDER_STATUS_ERROR, "订单状态不正确，无法支付");
         }
 
+        // 扣减商品库存
+        deductStockForOrder(order);
+
         // 更新订单状态和支付时间
         order.setStatus(Constants.ORDER_STATUS_PAID);
         order.setPayTime(LocalDateTime.now());
@@ -343,9 +441,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
             throw new BusinessException(ResultCode.ORDER_STATUS_ERROR, "订单状态不正确，无法取消");
         }
+        Integer oldStatus = order.getStatus();
         // 更新订单状态
         order.setStatus(Constants.ORDER_STATUS_CANCELLED);
         updateById(order);
+
+        if (Objects.equals(oldStatus, Constants.ORDER_STATUS_PAID)) {
+            restoreStockForOrder(order);
+        }
 
         // 释放房间
         roomService.updateStatus(order.getRoomId(), Constants.ROOM_STATUS_FREE);

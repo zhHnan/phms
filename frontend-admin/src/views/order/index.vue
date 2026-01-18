@@ -131,6 +131,14 @@
         <el-descriptions-item label="退房日期">{{ detailData.checkOutDate }}</el-descriptions-item>
         <el-descriptions-item label="入住天数">{{ detailData.days }}天</el-descriptions-item>
         <el-descriptions-item label="订单总价">¥{{ detailData.totalAmount || detailData.totalPrice || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="商品明细" :span="2">
+          <div v-if="detailData.items && detailData.items.length">
+            <div v-for="(item, idx) in detailData.items" :key="idx">
+              {{ item.productName }} x{{ item.quantity }} (¥{{ item.price }}) 小计¥{{ item.subtotal }}
+            </div>
+          </div>
+          <span v-else class="text-gray-500">无</span>
+        </el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '无' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailData.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="用户评分" :span="2">
@@ -324,6 +332,13 @@ interface Order {
   reviewScore?: number
   reviewContent?: string
   reviewCreatedAt?: string
+  items?: Array<{
+    productId: number
+    productName: string
+    price: number
+    quantity: number
+    subtotal: number
+  }>
 }
 
 const loading = ref(false)

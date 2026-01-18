@@ -84,6 +84,21 @@ const routes: RouteRecordRaw[] = [
         ]
     },
     {
+        path: '/product',
+        name: 'Product',
+        component: () => import('@/layout/index.vue'),
+        redirect: '/product/list',
+        meta: { title: '商品管理', icon: 'ShoppingCart', perm: 'product:list' },
+        children: [
+            {
+                path: 'list',
+                name: 'ProductList',
+                component: () => import('@/views/product/index.vue'),
+                meta: { title: '商品列表', perm: 'product:list' }
+            }
+        ]
+    },
+    {
         path: '/care',
         name: 'Care',
         component: () => import('@/layout/index.vue'),

@@ -37,6 +37,9 @@ public class OrderCreateDTO {
     @Schema(description = "离店日期")
     private LocalDate checkOutDate;
 
+    @Schema(description = "商品明细")
+    private List<OrderItemCreateDTO> items;
+
     @Schema(description = "备注")
     private String remark;
 }

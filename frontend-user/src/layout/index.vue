@@ -7,7 +7,7 @@
           <!-- Logo -->
           <router-link to="/" class="flex items-center space-x-2">
             <span class="text-2xl">🐾</span>
-            <span class="text-xl font-bold text-gray-900">宠物酒店</span>
+            <span class="text-xl font-bold text-gray-900">宠物之家</span>
           </router-link>
 
           <!-- 导航链接 -->

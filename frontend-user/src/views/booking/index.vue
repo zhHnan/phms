@@ -1,5 +1,8 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <button @click="$router.back()" class="flex items-center text-gray-600 hover:text-primary-600 mb-6">
+      <span>← 返回</span>
+    </button>
     <h1 class="text-3xl font-bold text-gray-900 mb-8">预订房间</h1>
 
     <div v-if="loading" class="text-center py-20">
@@ -43,6 +46,39 @@
             入住 <strong>{{ days }}</strong> 天，预计费用: 
             <strong class="text-xl">¥{{ totalPrice }}</strong>
           </p>
+        </div>
+      </div>
+
+      <!-- 商品选购 -->
+      <div class="card" v-if="productList.length">
+        <h2 class="text-lg font-semibold mb-4">商品选购</h2>
+        <div class="flex gap-4 overflow-x-auto pb-2 product-scroll-h">
+          <div v-for="p in productList" :key="p.id" class="p-4 border rounded-lg flex-shrink-0 w-48">
+            <div class="flex flex-col gap-2 h-full">
+              <div class="w-full h-24 rounded bg-gray-100 overflow-hidden flex-shrink-0">
+                <img
+                  v-if="getProductImages(p.images).length"
+                  :src="getProductImages(p.images)[0]"
+                  :alt="p.name"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-2xl">📦</div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm truncate">{{ p.name }}</p>
+                <p class="text-xs text-gray-500">¥{{ p.price }} / 件</p>
+                <p class="text-xs text-gray-400 mt-1">库存：{{ p.stock }}</p>
+              </div>
+              <el-input-number
+                v-model="productQty[p.id]"
+                :min="0"
+                :max="p.stock"
+                size="small"
+                class="w-full"
+              />
+              <p v-if="p.description" class="text-xs text-gray-500 line-clamp-2">{{ p.description }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -213,6 +249,15 @@ interface Pet {
   notes: string
 }
 
+interface Product {
+  id: number
+  name: string
+  price: number
+  stock: number
+  description?: string
+  images?: string
+}
+
 const route = useRoute()
 const router = useRouter()
 
@@ -225,6 +270,8 @@ const room = ref<Room | null>(null)
 const roomTypeDisplay = computed(() => room.value?.typeNameDisplay || room.value?.typeName || '')
 const pets = ref<Pet[]>([])
 const selectedPets = ref<number[]>([]) // 选中的宠物ID列表
+const productList = ref<Product[]>([])
+const productQty = ref<Record<number, number>>({})
 
 const formatLocalDate = (d: Date) => {
   const y = d.getFullYear()
@@ -422,7 +469,20 @@ const days = computed(() => {
 })
 
 const totalPrice = computed(() => {
-  return (room.value?.pricePerNight || 0) * days.value
+  return (room.value?.pricePerNight || 0) * days.value + productTotal.value
+})
+
+const productTotal = computed(() => {
+  return productList.value.reduce((sum, p) => {
+    const qty = productQty.value[p.id] || 0
+    return sum + qty * p.price
+  }, 0)
+})
+
+const selectedProductItems = computed(() => {
+  return Object.entries(productQty.value)
+    .map(([id, qty]) => ({ productId: Number(id), quantity: Number(qty) }))
+    .filter(item => item.quantity > 0)
 })
 
 const canSubmit = computed(() => {
@@ -451,11 +511,41 @@ const fetchData = async () => {
     ])
     room.value = roomRes.data || roomRes
     pets.value = petsRes.data || petsRes
+
+    if (room.value?.hotelId) {
+      const productRes = await request.get('/product/user/list', {
+        params: { hotelId: room.value.hotelId }
+      })
+      productList.value = productRes.data || []
+
+      const initItems = parseSelectedProducts()
+      const initQty: Record<number, number> = {}
+      productList.value.forEach(p => {
+        const found = initItems.find(i => i.productId === p.id)
+        initQty[p.id] = found ? found.quantity : 0
+      })
+      productQty.value = initQty
+    }
   } catch (error) {
     console.error('获取数据失败:', error)
   } finally {
     loading.value = false
   }
+}
+
+const parseSelectedProducts = () => {
+  const raw = route.query.products as string
+  if (!raw) return [] as Array<{ productId: number; quantity: number }>
+  try {
+    const decoded = decodeURIComponent(raw)
+    const parsed = JSON.parse(decoded)
+    if (Array.isArray(parsed)) {
+      return parsed
+    }
+  } catch (e) {
+    return []
+  }
+  return []
 }
 
 const handleAddPet = async () => {
@@ -542,7 +632,8 @@ const handleSubmit = async () => {
       petIds: selectedPets.value,
       checkInDate: form.checkInDate,
       checkOutDate: form.checkOutDate,
-      remark: form.remark
+      remark: form.remark,
+      items: selectedProductItems.value
     })
     const orderData = res.data || res
     showSuccess(`预订成功！订单号：${orderData.orderNo}\n请在1分钟内完成支付，否则订单将被自动取消`)
@@ -555,4 +646,33 @@ const handleSubmit = async () => {
 }
 
 onMounted(fetchData)
+
+const getProductImages = (imagesJson: string | undefined) => {
+  if (!imagesJson) return []
+  try {
+    return JSON.parse(imagesJson)
+  } catch (e) {
+    return []
+  }
+}
 </script>
+
+<style scoped>
+.product-scroll-h::-webkit-scrollbar {
+  height: 6px;
+}
+
+.product-scroll-h::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.product-scroll-h::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.6);
+  border-radius: 999px;
+}
+
+.product-scroll-h {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+}
+</style>

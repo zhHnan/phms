@@ -8,7 +8,7 @@
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
     </div>
               我已扫码
-    <div v-else-if="order" class="space-y-6">
+    <div v-else class="space-y-6">
       <!-- 订单状态 -->
       <div class="card">
         <div class="flex justify-between items-center">
@@ -85,6 +85,13 @@
           <div class="flex justify-between">
             <span class="text-gray-500">入住天数</span>
             <span>{{ order.days }}天</span>
+          </div>
+          <div v-if="order.items && order.items.length" class="pt-2 border-t">
+            <div class="text-gray-500 mb-2">商品明细</div>
+            <div v-for="(item, idx) in order.items" :key="idx" class="flex justify-between text-sm">
+              <span>{{ item.productName }} x{{ item.quantity }}</span>
+              <span>¥{{ item.subtotal }}</span>
+            </div>
           </div>
           <div class="flex justify-between pt-2 border-t font-bold text-lg">
             <span>订单总价</span>
@@ -256,7 +263,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import request from '@/utils/request'
-import { showError, showConfirm, showSuccess, showInfo } from '@/utils/message'
+import { showError, showConfirm, showSuccess } from '@/utils/message'
 import { formatDateTime } from '@/utils/datetime'
 
 interface Pet {
@@ -283,6 +290,13 @@ interface Order {
   status: number
   remark: string
   createdAt: string
+  items?: Array<{
+    productId: number
+    productName: string
+    price: number
+    quantity: number
+    subtotal: number
+  }>
 }
 
 interface CareLog {
@@ -304,7 +318,7 @@ interface HotelReview {
 
 const route = useRoute()
 
-const order = ref<Order | null>(null)
+const order = ref<Order>({} as Order)
 const careLogs = ref<CareLog[]>([])
 const loading = ref(true)
 const paying = ref(false)
@@ -536,11 +550,6 @@ const cancelOrder = async () => {
   } catch (error: any) {
     showError(error.message || '取消失败')
   }
-}
-
-const payOrder = async () => {
-  if (!order.value) return
-  openCashier()
 }
 
 const openCashier = () => {

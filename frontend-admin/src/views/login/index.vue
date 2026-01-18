@@ -3,8 +3,8 @@
     <div class="login-box">
       <div class="login-header">
         <span class="logo">🐾</span>
-        <h1>宠物酒店管理系统</h1>
-        <p>员工登录</p>
+        <h1>宠物之家管理平台</h1>
+        <p>后台登录</p>
       </div>
       <el-form
         ref="formRef"
@@ -106,15 +106,18 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.3), rgba(224, 231, 255, 0.35)),
+    url('https://images.unsplash.com/photo-1507146426996-ef05306b995a?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;
+  position: relative;
 }
 
 .login-box {
-  width: 400px;
-  padding: 40px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 420px;
+  padding: 44px 40px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(30, 41, 59, 0.12);
+  backdrop-filter: blur(2px);
 }
 
 .login-header {
@@ -122,38 +125,54 @@ const handleLogin = async () => {
   margin-bottom: 30px;
 
   .logo {
-    font-size: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #e0e7ff, #dbeafe);
+    font-size: 34px;
   }
 
   h1 {
-    font-size: 24px;
-    color: #333;
+    font-size: 26px;
+    color: #0f172a;
     margin: 10px 0 5px;
+    font-weight: 700;
   }
 
   p {
-    color: #999;
+    color: #475569;
     font-size: 14px;
   }
 }
 
 .login-form {
   .el-form-item {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .login-btn {
     width: 100%;
+    height: 44px;
+    border-radius: 10px;
+    font-weight: 600;
+    background: linear-gradient(135deg,rgba(38, 52, 69, 0.7), rgba(43, 60, 82, 0.7));
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(2px);
   }
 }
 
 .login-tips {
   margin-top: 20px;
-  padding: 15px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
+  padding: 14px 16px;
+  background-color: rgba(241, 245, 249, 0.1);
+  border-radius: 10px;
   font-size: 12px;
-  color: #666;
+  color: #475569;
+  border: 1px solid rgba(208, 215, 224, 0.1);
+  backdrop-filter: blur(2px);
 
   p {
     margin: 4px 0;
