@@ -274,7 +274,7 @@
         <div class="flex items-center justify-between px-4 py-3 border-b">
           <div>
             <p class="text-base font-semibold">在线客服</p>
-            <p class="text-xs text-gray-500" v-if="staffId">正在连接客服ID {{ staffId }}</p>
+            <p class="text-xs text-gray-500" v-if="staffId">正在连接客服 {{ staffName || ('ID ' + staffId) }}</p>
             <p class="text-xs text-gray-500" v-else>匹配在线客服中...</p>
           </div>
           <button class="text-gray-400 hover:text-gray-600" @click="closeServiceChat">✕</button>
@@ -381,6 +381,7 @@ const hotelReviewCount = ref(0)
 
 const serviceVisible = ref(false)
 const staffId = ref<number | null>(null)
+const staffName = ref('')
 const chatInput = ref('')
 const chatMessages = ref<{ from: 'me' | 'staff'; text: string; ts: number }[]>([])
 const wsRef = ref<WebSocket | null>(null)
@@ -495,8 +496,8 @@ const scrollChatToBottom = async () => {
   }
 }
 
-const pushMessage = (from: 'me' | 'staff', text: string) => {
-  chatMessages.value.push({ from, text, ts: Date.now() })
+const pushMessage = (from: 'me' | 'staff', text: string, ts?: number) => {
+  chatMessages.value.push({ from, text, ts: ts ?? Date.now() })
   scrollChatToBottom()
 }
 
@@ -504,17 +505,50 @@ const connectWs = (id: number) => {
   const token = localStorage.getItem('user_token') || ''
   const base = window.location.origin.replace(/^http/, 'ws')
   const roomId = route.params.id ? Number(route.params.id) : ''
-  const url = `${base}/api/ws/chat?staffId=${id}${roomId ? `&roomId=${roomId}` : ''}${token ? `&token=${encodeURIComponent(token)}` : ''}`
+  const hotelId = room.value?.hotelId ? Number(room.value.hotelId) : ''
+  const url = `${base}/api/ws/chat?staffId=${id}${roomId ? `&roomId=${roomId}` : ''}${hotelId ? `&hotelId=${hotelId}` : ''}${token ? `&token=${encodeURIComponent(token)}` : ''}`
+  console.log('正在连接 WebSocket:', url)
+  console.log('Token:', token ? '有' : '无')
+  console.log('StaffId:', id)
+  console.log('RoomId:', roomId)
   wsRef.value = new WebSocket(url)
 
   wsRef.value.onopen = () => {
+    console.log('WebSocket 连接成功')
     connected.value = true
-    pushMessage('staff', '您好，我是客服，很高兴为您服务。')
   }
 
   wsRef.value.onmessage = (evt) => {
+    console.log('收到消息:', evt.data)
     try {
       const payload = JSON.parse(evt.data)
+      if (payload?.type === 'STAFF_CONNECTED') {
+        if (payload.staffName) {
+          staffName.value = payload.staffName
+        }
+        return
+      }
+      if (payload?.type === 'HISTORY') {
+        if (payload.staffName) {
+          staffName.value = payload.staffName
+        }
+        const history = Array.isArray(payload.messages) ? payload.messages : []
+        history.forEach((msg: any) => {
+          if (!msg) return
+          const from = msg.sender === 'user' ? 'me' : 'staff'
+          const ts = msg.ts ? Number(msg.ts) : undefined
+          pushMessage(from, String(msg.text || msg.message || ''), ts)
+        })
+        return
+      }
+      if (payload?.type === 'GREETING') {
+        if (payload.staffName) {
+          staffName.value = payload.staffName
+        }
+        const greetText = payload.text || '您好，我是客服，很高兴为您服务。'
+        pushMessage('staff', String(greetText))
+        return
+      }
       const text = payload?.text || payload?.message || evt.data
       pushMessage('staff', String(text))
     } catch {
@@ -522,27 +556,35 @@ const connectWs = (id: number) => {
     }
   }
 
-  wsRef.value.onclose = () => {
+  wsRef.value.onclose = (evt) => {
+    console.log('WebSocket 连接关闭:', evt.code, evt.reason)
     connected.value = false
   }
 
-  wsRef.value.onerror = () => {
+  wsRef.value.onerror = (err) => {
+    console.error('WebSocket 错误:', err)
     connected.value = false
+    pushMessage('staff', '连接出错，请刷新重试')
   }
 }
 
 const fetchOnlineStaff = async () => {
   try {
+    console.log('正在获取在线客服...')
     const res = await request.get('/support/online-staff')
+    console.log('客服API响应:', res)
     const id = res.data?.id || res.data?.staffId
     if (id) {
+      console.log('匹配到客服ID:', id)
       staffId.value = Number(id)
       connectWs(Number(id))
     } else {
+      console.warn('没有在线客服')
       pushMessage('staff', '当前暂无在线客服，请稍后再试。')
     }
-  } catch (error) {
-    console.error('获取在线客服失败', error)
+  } catch (error: any) {
+    console.error('获取在线客服失败:', error)
+    console.error('错误详情:', error.message, error.response)
     pushMessage('staff', '获取在线客服失败，请稍后重试。')
   }
 }

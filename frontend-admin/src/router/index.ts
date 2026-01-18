@@ -165,6 +165,21 @@ const routes: RouteRecordRaw[] = [
         ]
     },
     {
+        path: '/support',
+        name: 'Support',
+        component: () => import('@/layout/index.vue'),
+        redirect: '/support/chat',
+        meta: { title: '在线客服', icon: 'ChatDotRound' },
+        children: [
+            {
+                path: 'chat',
+                name: 'SupportChat',
+                component: () => import('@/views/support/index.vue'),
+                meta: { title: '客服聊天' }
+            }
+        ]
+    },
+    {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('@/views/error/404.vue'),
