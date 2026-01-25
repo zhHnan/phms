@@ -43,13 +43,26 @@
           </el-button>
         </el-form-item>
       </el-form>
-      <div class="login-tips">
-        <p>测试账号：</p>
-        <p>超级管理员：admin@phms.com / 123456</p>
-        <p>店长：manager1@phms.com / 123456</p>
-        <p>普通员工：staff1@phms.com / 123456</p>
-      </div>
+      <!-- 敏捷卡片浮动按钮（已移至容器外部，避免被输入框覆盖） -->
     </div>
+    <transition name="fade">
+        <div v-if="showCard" class="agile-card-float">
+          <div class="agile-card-header">
+            <span>测试账号</span>
+            <el-icon class="close-icon" @click="showCard = false"><Close /></el-icon>
+          </div>
+          <div class="agile-card-content">
+            <p>超级管理员：admin@phms.com / 123456</p>
+            <p>店长：manager1@phms.com / 123456</p>
+            <p>普通员工：staff1@phms.com / 123456</p>
+          </div>
+        </div>
+      </transition>
+    <transition name="fade">
+      <div v-if="!showCard" class="agile-card-toggle" @click="showCard = true">
+        <el-icon><InfoFilled /></el-icon>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -59,11 +72,15 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, FormInstance, FormRules } from 'element-plus'
 
+import { Close, InfoFilled } from '@element-plus/icons-vue'
+
 const router = useRouter()
 const userStore = useUserStore()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+
+const showCard = ref(true)
 
 const loginForm = reactive({
   email: 'admin@phms.com',
@@ -165,17 +182,77 @@ const handleLogin = async () => {
 }
 
 .login-tips {
-  margin-top: 20px;
-  padding: 14px 16px;
-  background-color: rgba(241, 245, 249, 0.1);
-  border-radius: 10px;
-  font-size: 12px;
-  color: #475569;
-  border: 1px solid rgba(208, 215, 224, 0.1);
-  backdrop-filter: blur(2px);
+  // ...原有内容已移除，仅保留占位，防止未闭合错误
+}
 
-  p {
-    margin: 4px 0;
-  }
+// 敏捷卡片浮动样式
+.agile-card-float {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  width: 260px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(30,41,59,0.13);
+  z-index: 1002;
+  padding: 0 0 10px 0;
+  border: 1px solid #e0e7ef;
+  animation: floatIn .3s;
+}
+.agile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 0 16px;
+  font-weight: 600;
+  color: #334155;
+  font-size: 15px;
+}
+.agile-card-content {
+  padding: 8px 16px 0 16px;
+  font-size: 13px;
+  color: #475569;
+}
+.close-icon {
+  cursor: pointer;
+  font-size: 18px;
+  color: #64748b;
+  transition: color 0.2s;
+}
+.close-icon:hover {
+  color: #f87171;
+}
+.agile-card-toggle {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #e0e7ff, #dbeafe);
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(30,41,59,0.13);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1001;
+  font-size: 26px;
+  color: #475569;
+  border: 1px solid #e0e7ef;
+  transition: background 0.2s;
+}
+.agile-card-toggle:hover {
+  background: linear-gradient(135deg, #c7d2fe, #e0e7ff);
+}
+@keyframes floatIn {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>

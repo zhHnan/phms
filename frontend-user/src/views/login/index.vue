@@ -22,7 +22,7 @@
               required
               maxlength="11"
               class="input-field"
-              placeholder="请输入手机号"
+              placeholder="13800138001(测试账号)"
             />
           </div>
 
@@ -64,13 +64,6 @@
           未注册的手机号将自动创建账号
         </p>
       </form>
-
-      <!-- 测试用提示 -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 class="text-sm font-medium text-blue-800 mb-2">测试账号</h4>
-        <p class="text-xs text-blue-600">手机号: 13800138001</p>
-        <p class="text-xs text-blue-600">验证码: 123456 (开发环境)</p>
-      </div>
     </div>
   </div>
 </template>
@@ -131,7 +124,8 @@ const handleLogin = async () => {
   try {
     await userStore.login(phone.value, code.value)
     const redirect = route.query.redirect as string || '/'
-    // 提示登录成功
+    // 登录成功后设置 sessionStorage 标记
+    window.sessionStorage.setItem('phms-just-logged-in', '1')
     showSuccess('登录成功')
     router.push(redirect)
   } catch (error: any) {
