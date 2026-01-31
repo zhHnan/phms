@@ -123,23 +123,23 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(239, 246, 255, 0.3), rgba(224, 231, 255, 0.35)),
-    url('https://images.unsplash.com/photo-1507146426996-ef05306b995a?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;
+  background-color: #f0f2f5;
+  background-image: radial-gradient(circle at 50% 50%, rgba(48, 65, 86, 0.05) 0%, transparent 100%);
   position: relative;
 }
 
 .login-box {
-  width: 420px;
-  padding: 44px 40px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 18px;
-  box-shadow: 0 20px 50px rgba(30, 41, 59, 0.12);
-  backdrop-filter: blur(2px);
+  width: 400px;
+  padding: 40px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(48, 65, 86, 0.1);
+  border: 1px solid #e4e7ed;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 
   .logo {
     display: inline-flex;
@@ -147,106 +147,139 @@ const handleLogin = async () => {
     justify-content: center;
     width: 64px;
     height: 64px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #e0e7ff, #dbeafe);
-    font-size: 34px;
+    border-radius: 12px;
+    background-color: rgb(48, 65, 86);
+    font-size: 32px;
+    color: #ffffff;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(48, 65, 86, 0.2);
   }
 
   h1 {
-    font-size: 26px;
-    color: #0f172a;
-    margin: 10px 0 5px;
-    font-weight: 700;
+    font-size: 24px;
+    color: #303133;
+    margin: 0 0 8px;
+    font-weight: 600;
   }
 
   p {
-    color: #475569;
+    color: #909399;
     font-size: 14px;
+    margin: 0;
   }
 }
 
 .login-form {
+  :deep(.el-input__wrapper) {
+    box-shadow: 0 0 0 1px #dcdfe6 inset;
+    &:hover {
+      box-shadow: 0 0 0 1px #c0c4cc inset;
+    }
+    &.is-focus {
+      box-shadow: 0 0 0 1px rgb(48, 65, 86) inset !important;
+    }
+  }
+
   .el-form-item {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .login-btn {
     width: 100%;
     height: 44px;
-    border-radius: 10px;
+    border-radius: 4px;
     font-weight: 600;
-    background: linear-gradient(135deg,rgba(38, 52, 69, 0.7), rgba(43, 60, 82, 0.7));
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(2px);
-  }
-}
+    font-size: 16px;
+    background: rgb(48, 65, 86);
+    border-color: rgb(48, 65, 86);
+    color: #ffffff;
+    transition: all 0.3s;
 
-.login-tips {
-  // ...原有内容已移除，仅保留占位，防止未闭合错误
+    &:hover {
+      background: rgb(60, 80, 105);
+      border-color: rgb(60, 80, 105);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(48, 65, 86, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
 }
 
 // 敏捷卡片浮动样式
 .agile-card-float {
   position: fixed;
-  right: 32px;
-  bottom: 32px;
-  width: 260px;
-  background: rgba(255,255,255,0.95);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(30,41,59,0.13);
+  right: 24px;
+  bottom: 24px;
+  width: 280px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(48, 65, 86, 0.15);
   z-index: 1002;
-  padding: 0 0 10px 0;
-  border: 1px solid #e0e7ef;
-  animation: floatIn .3s;
+  padding: 0;
+  border: 1px solid #e4e7ed;
+  animation: floatIn .3s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
+
 .agile-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px 0 16px;
+  padding: 12px 16px;
   font-weight: 600;
-  color: #334155;
-  font-size: 15px;
+  color: #303133;
+  font-size: 14px;
+  border-bottom: 1px solid #f2f6fc;
 }
+
 .agile-card-content {
-  padding: 8px 16px 0 16px;
+  padding: 16px;
   font-size: 13px;
-  color: #475569;
+  color: #606266;
+  line-height: 1.6;
+
+  p {
+    margin: 0 0 8px;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 }
+
 .close-icon {
   cursor: pointer;
-  font-size: 18px;
-  color: #64748b;
-  transition: color 0.2s;
+  font-size: 16px;
+  color: #909399;
+  transition: all 0.2s;
+  &:hover {
+    color: #f56c6c;
+  }
 }
-.close-icon:hover {
-  color: #f87171;
-}
+
 .agile-card-toggle {
   position: fixed;
-  right: 32px;
-  bottom: 32px;
+  right: 24px;
+  bottom: 24px;
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #e0e7ff, #dbeafe);
-  border-radius: 50%;
-  box-shadow: 0 4px 16px rgba(30,41,59,0.13);
+  background: rgb(48, 65, 86);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(48, 65, 86, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 1001;
-  font-size: 26px;
-  color: #475569;
-  border: 1px solid #e0e7ef;
-  transition: background 0.2s;
-}
-.agile-card-toggle:hover {
-  background: linear-gradient(135deg, #c7d2fe, #e0e7ff);
-}
-@keyframes floatIn {
-  from { transform: translateY(40px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  font-size: 24px;
+  color: #ffffff;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgb(60, 80, 105);
+    transform: scale(1.05) rotate(5deg);
+  }
 }
 
 .fade-enter-active, .fade-leave-active {
