@@ -58,6 +58,10 @@ public class StaffScheduleController {
         if (!canAccessStaff(staffId)) {
             throw new BusinessException(ResultCode.NO_PERMISSION, "无权限查看该员工排班");
         }
+        // 默认只查询今天及以后的排班
+        if (from == null) {
+            from = LocalDate.now();
+        }
         return Result.success(staffScheduleService.listByStaff(staffId, from, to));
     }
 

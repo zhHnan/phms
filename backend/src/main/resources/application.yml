@@ -111,6 +111,12 @@ knife4j:
     language: zh_cn
     swagger-model-name: 实体类列表
 
+# Aliyun配置
+aliyun:
+  region-id: cn-beijing
+  access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+  access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
+
 # 日志配置
 logging:
   level:

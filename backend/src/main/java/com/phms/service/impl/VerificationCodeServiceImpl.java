@@ -6,6 +6,7 @@ import com.phms.common.constant.Constants;
 import com.phms.entity.VerificationCode;
 import com.phms.mapper.VerificationCodeMapper;
 import com.phms.service.VerificationCodeService;
+import com.phms.util.MessageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,6 +27,7 @@ public class VerificationCodeServiceImpl extends ServiceImpl<VerificationCodeMap
         implements VerificationCodeService {
 
     private final StringRedisTemplate redisTemplate;
+    private final MessageUtil messageUtil;
 
     @Override
     public String sendCode(String phone, Integer type) {
@@ -46,8 +48,7 @@ public class VerificationCodeServiceImpl extends ServiceImpl<VerificationCodeMap
         save(verificationCode);
         
         // 模拟发送短信（实际生产环境对接短信服务商）
-        log.info("【宠物酒店】验证码已发送到 {}，验证码：{}，有效期 {} 分钟", 
-                phone, code, Constants.CODE_EXPIRE_MINUTES);
+        messageUtil.sendMsg(phone, code);
         
         // 返回验证码（仅测试环境，生产环境应返回null）
         return code;
