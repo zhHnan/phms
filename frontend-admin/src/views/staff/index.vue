@@ -153,7 +153,7 @@
     <!-- 排班弹窗 -->
     <el-dialog v-model="scheduleVisible" :title="scheduleTitle" width="720px">
       <div class="mb-3 text-gray-600">员工：{{ scheduleStaff?.realName }}（{{ getRoleName(scheduleStaff?.roleType || 1) }}）</div>
-      <el-table :data="scheduleList" v-loading="scheduleLoading" stripe border @selection-change="handleScheduleSelection">
+      <el-table :data="scheduleList" v-loading="scheduleLoading" stripe border @selection-change="handleScheduleSelection" height="300">
         <el-table-column v-if="canManageSchedule" type="selection" width="50" />
         <el-table-column prop="workDate" label="日期" width="120" />
         <el-table-column prop="shiftType" label="班次" width="120">
@@ -179,7 +179,11 @@
         </el-table-column>
       </el-table>
 
-      <div class="mt-4">
+      <div class="mt-4" v-if="canManageSchedule">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-base font-medium">{{ scheduleForm.id ? '编辑排班' : '新增排班' }}</h4>
+          <el-button v-if="scheduleForm.id" size="small" @click="resetScheduleForm">取消编辑</el-button>
+        </div>
         <el-form :model="scheduleForm" label-width="100px">
           <el-form-item label="日期" v-if="scheduleForm.id">
             <el-date-picker
@@ -643,6 +647,14 @@ const editSchedule = (row: any) => {
   scheduleForm.shiftType = row.shiftType
   scheduleForm.startTime = row.startTime || ''
   scheduleForm.endTime = row.endTime || ''
+}
+
+const resetScheduleForm = () => {
+  scheduleForm.id = null
+  scheduleForm.workDate = ''
+  scheduleForm.dateRange = []
+  scheduleForm.shiftType = 1
+  applyShiftDefaults()
 }
 
 const deleteSchedule = async (row: any) => {

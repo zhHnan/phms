@@ -813,7 +813,7 @@ const fetchReviewSummary = async (hotelId: number, roomId: number) => {
 const fetchReviews = async (hotelId: number) => {
   try {
     const res = await request.get(`/hotel-review/list/${hotelId}`, {
-      params: {limit: 10}
+      params: {limit: 12}
     })
     reviews.value = res.data || []
   } catch (error) {

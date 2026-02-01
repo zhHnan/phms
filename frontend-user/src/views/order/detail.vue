@@ -161,7 +161,7 @@
       </div>
 
       <!-- 照料记录 -->
-      <div v-if="order.status === 2 && careLogs.length > 0" class="card">
+      <div v-if="(order.status === 2 || order.status === 3) && careLogs.length > 0" class="card">
         <h3 class="text-lg font-semibold mb-4">照料记录</h3>
         <div class="overflow-x-auto pb-2">
           <div class="flex gap-4 min-w-full">
@@ -488,8 +488,8 @@ const fetchOrder = async () => {
     const res = await request.get(`/order/${route.params.id}`)
     order.value = res.data
 
-    // 如果订单在入住中，获取照料记录
-    if (res.data.status === 2) {
+    // 如果订单在入住中或已完成，获取照料记录
+    if (res.data.status === 2 || res.data.status === 3) {
       const logsRes = await request.get(`/care-log/order/${route.params.id}`)
       const logs = logsRes.data || []
       careLogs.value = logs.sort((a: CareLog, b: CareLog) => {
